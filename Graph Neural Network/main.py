@@ -48,7 +48,8 @@ class MapColoringSolutionPrinter(cp_model.CpSolverSolutionCallback):
 
         self.solution = [-1 for _ in range(graph.number_of_nodes() + 1)]
 
-    def solution_count(self):
+    @property
+    def solution_count(self) -> int:
         return self.__no_solutions
 
     def on_solution_callback(self):
@@ -56,33 +57,19 @@ class MapColoringSolutionPrinter(cp_model.CpSolverSolutionCallback):
             self.__search_time = time.time() - self.__start_time
             print(f"\nSolution {self.__no_solutions}")
 
+        if self.__no_solutions == 1:
+            for index, node in enumerate(self.__color_assignments, 1):
+                if self.__show:
+                    print(f"{node}={self.Value(node)} , ", end="")
+                self.solution[index] = self.Value(node)
+
         self.__no_solutions += 1
 
-        for index, node in enumerate(self.__color_assignments, 1):
-            if self.__show:
-                print(f"{node}={self.Value(node)} , ", end="")
-            self.solution[index] = self.Value(node)
         if self.__show:
             print()
 
         self.__show = False
         self.StopSearch()
-
-
-def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
-    """
-    Create a graph as a nx.Graph instance.We assume nodes are from indexed from 1 to no_vertices
-    :param no_vertices: the number of vertices/nodes
-    :param edges: the number of edges
-    :return: a nx.Graph instance
-    """
-    graph = nx.Graph()
-
-    graph.add_nodes_from(range(1, no_vertices + 1))
-
-    graph.add_edges_from(edges)
-
-    return graph
 
 
 def is_colorable(graph: nx.Graph, no_colors: int, verbose: bool = False) -> tuple[bool, Union[None, list[int]]]:
@@ -110,7 +97,7 @@ def is_colorable(graph: nx.Graph, no_colors: int, verbose: bool = False) -> tupl
         model.Add(color_assignments[node1 - 1] != color_assignments[node2 - 1])
 
     solver = cp_model.CpSolver()
-    solution_printer = MapColoringSolutionPrinter(graph, color_assignments, True)
+    solution_printer = MapColoringSolutionPrinter(graph, color_assignments, verbose)
 
     status = solver.Solve(model, solution_printer)
     if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
@@ -126,25 +113,46 @@ def is_colorable(graph: nx.Graph, no_colors: int, verbose: bool = False) -> tupl
     return True, coloring
 
 
-def find_chromatic_number(graph: nx.Graph) -> tuple[int, list[int]]:
+def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
+    """
+    Create a graph as a nx.Graph instance.We assume nodes are from indexed from 1 to no_vertices
+    :param no_vertices: the number of vertices/nodes
+    :param edges: the number of edges
+    :return: a nx.Graph instance
+    """
+    graph = nx.Graph()
+
+    graph.add_nodes_from(range(1, no_vertices + 1))
+
+    graph.add_edges_from(edges)
+
+    return graph
+
+
+def find_chromatic_number(graph: nx.Graph, verbose: bool = False) -> tuple[int, list[int]]:
     """
     Find the minimum number c with s.t. there exists a c-coloring of the graph.This solution uses binary
     search ( ͡° ͜ʖ ͡°)
     :param graph: the graph
     :return: a tuple with the minimum color number and the coloring(as proof)
     """
+    start_time = time.time()
+
     no_nodes = graph.number_of_nodes()
     left = 1
     right = no_nodes
     valid_coloring = [index - 1 for index in range(no_nodes + 1)]
     while left < right:
         possible_color = (left + right) // 2
-        exists_color_assignments, coloring = is_colorable(graph, possible_color, False)
+        exists_color_assignments, coloring = is_colorable(graph, possible_color, verbose)
         if exists_color_assignments:
             right = possible_color
             valid_coloring = coloring
         else:
             left = possible_color + 1
+
+    if verbose:
+        print(f"Execution time:{time.time() - start_time}")
 
     return right, valid_coloring
 
@@ -225,14 +233,18 @@ if __name__ == '__main__':
     # graph.add_edge(2, 3)
     # graph.add_edge(3, 4)
     # graph.add_edge(4, 1)
-    # # is_colorable(graph, 2, True)
-    #
+    # # is_colorable(graph, 3, False)
+    # #
     # no_colors, coloring = find_chromatic_number(graph)
     # print(no_colors)
     # print(coloring)
 
     instance_folder = "Instances"
-    instances_names = ["miles750"]
+    instances_names = ["queen8_8"]
     extension = ".col"
     instances = read_instances(instances_names, instance_folder, extension)
-    print(instances[0])
+    for instance in instances:
+        print(f"\n\nInstance name:{instance.file_name}")
+        chromatic_number, _ = find_chromatic_number(instance.graph, True)
+        print(f"\nFound chromatic number:{chromatic_number}")
+        print(f"\nReal chromatic number:{instance.chromatic_number}")
