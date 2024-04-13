@@ -93,11 +93,12 @@ def is_colorable(graph: nx.Graph, no_colors: int, verbose: bool = False) -> tupl
 
     color_assignments = [model.NewIntVar(0, no_colors - 1, "Node_" + str(index + 1)) for index in range(no_nodes)]
 
-    for (node1, node2) in graph.edges:
+    for (node1, node2) in graph.edges():
         model.Add(color_assignments[node1 - 1] != color_assignments[node2 - 1])
 
     solver = cp_model.CpSolver()
     solution_printer = MapColoringSolutionPrinter(graph, color_assignments, verbose)
+    solver.parameters.num_search_workers = 8
 
     status = solver.Solve(model, solution_printer)
     if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
@@ -240,11 +241,21 @@ if __name__ == '__main__':
     # print(coloring)
 
     instance_folder = "Instances"
-    instances_names = ["queen8_8"]
+    instances_names = []
+    # instances_names += ["anna", "david", "huck", "jean","homer"]
+    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    # instances_names += ["games120", "miles250"]
+    # instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12"]
+    # instances_names += ["myciel3", "myciel4"]
     extension = ".col"
     instances = read_instances(instances_names, instance_folder, extension)
     for instance in instances:
         print(f"\n\nInstance name:{instance.file_name}")
-        chromatic_number, _ = find_chromatic_number(instance.graph, True)
-        print(f"\nFound chromatic number:{chromatic_number}")
-        print(f"\nReal chromatic number:{instance.chromatic_number}")
+
+        start_time = time.time()
+        chromatic_number, _ = find_chromatic_number(instance.graph, False)
+        execution_time = time.time() - start_time
+
+        print(f"Execution time:{execution_time}")
+        print(f"Found chromatic number:{chromatic_number}")
+        print(f"Real chromatic number:{instance.chromatic_number}")
