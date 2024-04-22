@@ -14,116 +14,14 @@ import torch.nn.functional as F
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
+from GCConstraintSatisfaction import find_chromatic_number
 from models import *
+from GraphColoring import *
+
+import pickle
 
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
-
-class GraphColoringInstance:
-    def __init__(self, file_name: str, graph: nx.Graph, chromatic_number: Union[int, None], description: str,
-                 source: str):
-        self.file_name = file_name
-        self.graph = graph
-        self.chromatic_number = chromatic_number
-        if chromatic_number is None:
-            self.chromatic_number = "Unknown"
-
-        self.description = description
-        self.source = source
-
-    def __str__(self):
-        representation = ""
-        representation += f"\n\nFor instance {self.file_name} from {self.source}"
-        representation += f"\nDescription:\n{self.description}"
-        representation += f"\nGraph:{self.graph}"
-        representation += f"\nChromatic Number:{self.chromatic_number}"
-        return representation
-
-    def __repr__(self):
-        return self.__str__()
-
-
-# Used for extracting the solution
-class MapColoringSolutionPrinter(cp_model.CpSolverSolutionCallback):
-    def __init__(self, graph: nx.Graph, color_assignments: list, show: bool = False):
-        cp_model.CpSolverSolutionCallback.__init__(self)
-        self.__graph = graph
-        self.__color_assignments = color_assignments
-
-        self.__show = show
-
-        self.__no_solutions = 1
-
-        self.__start_time = time.time()
-        self.__search_time = time.time()
-
-        self.solution = [-1 for _ in range(graph.number_of_nodes() + 1)]
-
-    @property
-    def solution_count(self) -> int:
-        return self.__no_solutions
-
-    def on_solution_callback(self):
-        if self.__show:
-            self.__search_time = time.time() - self.__start_time
-            print(f"\nSolution {self.__no_solutions}")
-
-        if self.__no_solutions == 1:
-            for index, node in enumerate(self.__color_assignments, 1):
-                if self.__show:
-                    print(f"{node}={self.Value(node)} , ", end="")
-                self.solution[index] = self.Value(node)
-
-        self.__no_solutions += 1
-
-        if self.__show:
-            print()
-
-        self.__show = False
-        self.StopSearch()
-
-
-def is_colorable(graph: nx.Graph, no_colors: int, verbose: bool = False) -> tuple[bool, Union[None, list[int]]]:
-    """
-    Check whether a graph is colorable with no_colors
-    :param graph: the graph
-    :param no_colors: the number of colors to test
-    :param verbose: whether we show the description of the instance and results on the console
-    :return: a tuple with the info of whether we found a coloring.If True,we also return the coloring.
-    The coloring will be a list of no_vertices+1 with meaning of c_i=color of node i from 0 to no_nodes
-    Node 0 is by default -1.Colors start from 0 to no_colours-1
-    """
-    if verbose:
-        print("\nNo nodes:", graph.number_of_nodes())
-        print("No edges:", graph.number_of_edges())
-        print("Edges:", graph.edges)
-        print("No of colors:", no_colors)
-
-    model = cp_model.CpModel()
-    no_nodes = graph.number_of_nodes()
-
-    color_assignments = [model.NewIntVar(0, no_colors - 1, "Node_" + str(index + 1)) for index in range(no_nodes)]
-
-    for (node1, node2) in graph.edges():
-        model.Add(color_assignments[node1 - 1] != color_assignments[node2 - 1])
-
-    solver = cp_model.CpSolver()
-    solution_printer = MapColoringSolutionPrinter(graph, color_assignments, verbose)
-    solver.parameters.num_search_workers = 8
-
-    status = solver.Solve(model, solution_printer)
-    if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
-        if verbose:
-            print(f"No {no_colors}-coloring found")
-        return False, None
-
-    coloring = solution_printer.solution
-    if verbose:
-        print(f"Found a {no_colors}-coloring")
-        print(f"{no_colors}-coloring:", coloring)
-
-    return True, coloring
-
 
 def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
     """
@@ -139,34 +37,6 @@ def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
     graph.add_edges_from(edges)
 
     return graph
-
-
-def find_chromatic_number(graph: nx.Graph, verbose: bool = False) -> tuple[int, list[int]]:
-    """
-    Find the minimum number c with s.t. there exists a c-coloring of the graph.This solution uses binary
-    search ( ͡° ͜ʖ ͡°)
-    :param graph: the graph
-    :return: a tuple with the minimum color number and the coloring(as proof)
-    """
-    start_time = time.time()
-
-    no_nodes = graph.number_of_nodes()
-    left = 1
-    right = no_nodes
-    valid_coloring = [index - 1 for index in range(no_nodes + 1)]
-    while left < right:
-        possible_color = (left + right) // 2
-        exists_color_assignments, coloring = is_colorable(graph, possible_color, verbose)
-        if exists_color_assignments:
-            right = possible_color
-            valid_coloring = coloring
-        else:
-            left = possible_color + 1
-
-    if verbose:
-        print(f"Execution time:{time.time() - start_time}")
-
-    return right, valid_coloring
 
 
 def read_col_file(folder: str, instance_name: str, extension: str) -> GraphColoringInstance:
@@ -218,6 +88,7 @@ def read_instances(instance_names: list[str], instance_folder: str, extension: s
     for instance_name in instance_names:
         coloring_instance = read_col_file(instance_folder, instance_name, extension)
         instances.append(coloring_instance)
+        # instances.append(coloring_instance.convert_to_data())
     return instances
 
 
@@ -240,7 +111,7 @@ def generate_random_graph(n_nodes, n_edges):
     return G
 
 
-def convert_to_data(graph: nx.Graph, chromatic_number: int):
+def convert_to_data(graph: nx.Graph, chromatic_number: int, no_node_features: int = 1):
     # Create tensors for graph connectivity
     edge_index = []
     for edge in graph.edges():
@@ -251,13 +122,14 @@ def convert_to_data(graph: nx.Graph, chromatic_number: int):
     # Create labels as the chromatic number
     labels = torch.tensor(chromatic_number, dtype=torch.float)
 
-    features = torch.ones((graph.number_of_nodes(), 1), dtype=torch.float)
+    features = torch.ones((graph.number_of_nodes(), no_node_features), dtype=torch.float)
 
     return Data(x=features, edge_index=edge_index, y=labels)
 
 
-def generate_random_instances(no_instances: int, no_nodes_interval: tuple[int, int],
-                              edges_percent: tuple[float, float]):
+def generate_random_instances(no_instances: int,
+                              no_nodes_interval: tuple[int, int], edges_percent: tuple[float, float],
+                              no_node_features: int = 1):
     random_instances = []
     start_time = time.time()
 
@@ -269,15 +141,34 @@ def generate_random_instances(no_instances: int, no_nodes_interval: tuple[int, i
         max_num_edges = num_nodes * (num_nodes - 1) / 2
         num_edges = random.randint(int(max_num_edges * min_edges_percent), int(max_num_edges * max_edges_percent))
         graph = generate_random_graph(num_nodes, num_edges)
-        chromatic_number, _ = find_chromatic_number(graph, False)
 
-        random_instances.append(convert_to_data(graph, chromatic_number))
+        chromatic_number, coloring = find_chromatic_number(graph, False)
 
+        random_instances.append(
+            GraphColoringInstance("", graph, chromatic_number, description="Randomly Generated", coloring=coloring))
+
+        # random_instances.append(convert_to_data(graph, chromatic_number, no_node_features))
+
+    return random_instances
     # execution_time = time.time() - start_time
 
     # print(f"Execution time:{execution_time}")
 
-    return random_instances
+
+def save_instances(instances: list[GraphColoringInstance], folder: str, dataset_name: str):
+    file_path = folder + "\\" + dataset_name + ".pkl"
+    with open(file_path, 'wb') as file:
+        pickle.dump(instances, file)
+    file.close()
+
+
+def load_instances(folder: str, dataset_name: str):
+    file_path = folder + "\\" + dataset_name + ".pkl"
+    with open(file_path, 'rb') as file:
+        instances = pickle.load(file)  # deserialize using load()
+    file.close()
+
+    return instances
 
 
 def split_instances(data_list, split_percent: float):
@@ -314,8 +205,9 @@ def test(model, criterion, loader):
 
 def test_model(no_epochs: int,
                model, criterion, optimizer):
-    random_instances = generate_random_instances(no_instances=1000, no_nodes_interval=(30, 40),
-                                                 edges_percent=(0.10, 0.25))
+    random_instances = generate_random_instances(no_instances=1000,
+                                                 no_nodes_interval=(30, 40),
+                                                 edges_percent=(0.075, 0.3))
     train_dataset, left_instances = split_instances(random_instances, 0.7)
     val_dataset, test_dataset = split_instances(left_instances, 0.5)
 
@@ -329,6 +221,45 @@ def test_model(no_epochs: int,
         val_loss = test(model, criterion, val_loader)
         test_loss = test(model, criterion, test_loader)
         print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}')
+
+
+def inference_on(model, criterion,
+                 instance_folder: str, instance_names: list[str], extension: str):
+    model.eval()
+
+    instances = read_instances(instance_names, instance_folder, extension)
+
+    total_loss = 0
+    for instance in instances:  # Iterate in batches over the training/test dataset.
+        data = instance.convert_to_data()
+        prediction = model(data.x, data.edge_index, torch.zeros(data.num_nodes, dtype=torch.int64))
+        target = data.y.unsqueeze(0)
+        loss = criterion(prediction, target)
+        total_loss += loss.item()
+
+        file_name = instance.file_name
+
+        print(f"For {file_name}: Target:{target.item()} , Prediction:{prediction.item():.4f}")
+
+    print(f"Total loss for files:{total_loss:.4f}")
+
+
+def create_dataset():
+    no_instances = 100_000
+    no_nodes_interval = (30, 65)
+    edges_percent = (0.075, 0.35)
+
+    dataset_folder = "Datasets"
+    dataset_name = "RG1"
+
+    start_time = time.time()
+    instances = generate_random_instances(no_instances, no_nodes_interval, edges_percent)
+    print(f"Execution time {time.time() - start_time}")
+
+    save_instances(instances, dataset_folder, dataset_name)
+
+    # instances2 = load_instances(dataset_folder, dataset_name)
+    # print(instances2)
 
 
 if __name__ == '__main__':
@@ -380,9 +311,36 @@ if __name__ == '__main__':
     #     print(f"Execution time:{execution_time}")
     #     print(f"Found chromatic number:{chromatic_number}")
     #     print(f"Real chromatic number:{instance.chromatic_number}")
-    no_epochs = 50
-    model = GNNRegression2(hidden_channels=64)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = torch.nn.MSELoss()
 
-    test_model(no_epochs, model, criterion, optimizer)
+    instance_folder = "Instances"
+    instances_names = []
+    instances_names += ["anna", "david", "huck", "jean", "homer"]
+    instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    instances_names += ["games120", "miles250"]
+    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9"]
+    instances_names += ["myciel3", "myciel4", "myciel5", "myciel6"]
+    extension = ".col"
+
+    # no_epochs = 50
+    #
+    # model = GNNRegression2(hidden_channels=16)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # criterion = torch.nn.MSELoss()
+
+    # random_instances = generate_random_instances(no_instances=500,
+    #                                              no_nodes_interval=(10, 50),
+    #                                              edges_percent=(0.05, 0.15))
+    # train_dataset, left_instances = split_instances(random_instances, 0.95)
+    # train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+
+    # test_model(no_epochs, model, criterion, optimizer)
+    #
+    # inference_on(model, criterion, instance_folder, instances_names, extension)
+
+    # instances = read_instances(instances_names, instance_folder, extension)
+    # for instance in instances:
+    #     no_nodes = instance.graph.number_of_nodes()
+    #     no_edges = instance.graph.number_of_edges()
+    #     print(f"{instance.file_name} - {no_edges / (no_nodes * (no_nodes - 1) // 2):.4f}")
+
+    create_dataset()
