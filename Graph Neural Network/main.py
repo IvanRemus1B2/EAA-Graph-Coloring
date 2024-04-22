@@ -5,6 +5,17 @@ import networkx as nx
 
 from typing import Union
 
+import random
+
+import torch
+from torch.nn import Linear
+import torch.nn.functional as F
+
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
+
+from models import *
+
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
 
@@ -210,6 +221,116 @@ def read_instances(instance_names: list[str], instance_folder: str, extension: s
     return instances
 
 
+def generate_random_graph(n_nodes, n_edges):
+    G = nx.Graph()
+    nodes = range(1, n_nodes + 1)
+    G.add_nodes_from(nodes)
+
+    edges = set()
+    while len(edges) < n_edges:
+        edge = (random.randint(1, n_nodes), random.randint(1, n_nodes))
+        if edge[0] != edge[1]:
+            edges.add(edge)
+    G.add_edges_from(edges)
+
+    # Draw graph
+    # nx.draw(G, with_labels=True)
+    # plt.show()
+
+    return G
+
+
+def convert_to_data(graph: nx.Graph, chromatic_number: int):
+    # Create tensors for graph connectivity
+    edge_index = []
+    for edge in graph.edges():
+        node1, node2 = edge[0] - 1, edge[1] - 1
+        edge_index.append([node1, node2])
+    edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
+
+    # Create labels as the chromatic number
+    labels = torch.tensor(chromatic_number, dtype=torch.float)
+
+    features = torch.ones((graph.number_of_nodes(), 1), dtype=torch.float)
+
+    return Data(x=features, edge_index=edge_index, y=labels)
+
+
+def generate_random_instances(no_instances: int, no_nodes_interval: tuple[int, int],
+                              edges_percent: tuple[float, float]):
+    random_instances = []
+    start_time = time.time()
+
+    min_nodes, max_nodes = no_nodes_interval
+    min_edges_percent, max_edges_percent = edges_percent
+
+    for i in range(no_instances):
+        num_nodes = random.randint(min_nodes, max_nodes)
+        max_num_edges = num_nodes * (num_nodes - 1) / 2
+        num_edges = random.randint(int(max_num_edges * min_edges_percent), int(max_num_edges * max_edges_percent))
+        graph = generate_random_graph(num_nodes, num_edges)
+        chromatic_number, _ = find_chromatic_number(graph, False)
+
+        random_instances.append(convert_to_data(graph, chromatic_number))
+
+    # execution_time = time.time() - start_time
+
+    # print(f"Execution time:{execution_time}")
+
+    return random_instances
+
+
+def split_instances(data_list, split_percent: float):
+    random.shuffle(data_list)
+    no_instances = len(data_list)
+    split_point = int(no_instances * split_percent)
+
+    return data_list[:split_point], data_list[split_point:]
+
+
+def train(model, criterion, optimizer, train_loader):
+    model.train()
+
+    for data in train_loader:  # Iterate in batches over the training dataset.
+        prediction = model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
+        target = data.y.unsqueeze(1)
+        loss = criterion(prediction, target)  # Compute the loss.
+        loss.backward()  # Derive gradients.
+        optimizer.step()  # Update parameters based on gradients.
+        optimizer.zero_grad()  # Clear gradients.
+
+
+def test(model, criterion, loader):
+    model.eval()
+
+    total_loss = 0
+    for data in loader:  # Iterate in batches over the training/test dataset.
+        prediction = model(data.x, data.edge_index, data.batch)
+        target = data.y.unsqueeze(1)
+        loss = criterion(prediction, target)
+        total_loss += loss.item()
+    return total_loss
+
+
+def test_model(no_epochs: int,
+               model, criterion, optimizer):
+    random_instances = generate_random_instances(no_instances=1000, no_nodes_interval=(30, 40),
+                                                 edges_percent=(0.10, 0.25))
+    train_dataset, left_instances = split_instances(random_instances, 0.7)
+    val_dataset, test_dataset = split_instances(left_instances, 0.5)
+
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+    for epoch in range(1, no_epochs + 1):
+        train(model, criterion, optimizer, train_loader)
+        train_loss = test(model, criterion, train_loader)
+        val_loss = test(model, criterion, val_loader)
+        test_loss = test(model, criterion, test_loader)
+        print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}')
+
+
 if __name__ == '__main__':
     # graph = nx.Graph()
     #
@@ -240,22 +361,28 @@ if __name__ == '__main__':
     # print(no_colors)
     # print(coloring)
 
-    instance_folder = "Instances"
-    instances_names = []
-    # instances_names += ["anna", "david", "huck", "jean","homer"]
-    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
-    # instances_names += ["games120", "miles250"]
-    # instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12"]
-    # instances_names += ["myciel3", "myciel4"]
-    extension = ".col"
-    instances = read_instances(instances_names, instance_folder, extension)
-    for instance in instances:
-        print(f"\n\nInstance name:{instance.file_name}")
+    # instance_folder = "Instances"
+    # instances_names = []
+    # # instances_names += ["anna", "david", "huck", "jean","homer"]
+    # # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    # # instances_names += ["games120", "miles250"]
+    # # instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12"]
+    # # instances_names += ["myciel3", "myciel4"]
+    # extension = ".col"
+    # instances = read_instances(instances_names, instance_folder, extension)
+    # for instance in instances:
+    #     print(f"\n\nInstance name:{instance.file_name}")
+    #
+    #     start_time = time.time()
+    #     chromatic_number, _ = find_chromatic_number(instance.graph, False)
+    #     execution_time = time.time() - start_time
+    #
+    #     print(f"Execution time:{execution_time}")
+    #     print(f"Found chromatic number:{chromatic_number}")
+    #     print(f"Real chromatic number:{instance.chromatic_number}")
+    no_epochs = 50
+    model = GNNRegression2(hidden_channels=64)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    criterion = torch.nn.MSELoss()
 
-        start_time = time.time()
-        chromatic_number, _ = find_chromatic_number(instance.graph, False)
-        execution_time = time.time() - start_time
-
-        print(f"Execution time:{execution_time}")
-        print(f"Found chromatic number:{chromatic_number}")
-        print(f"Real chromatic number:{instance.chromatic_number}")
+    test_model(no_epochs, model, criterion, optimizer)
