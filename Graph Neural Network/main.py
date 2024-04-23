@@ -23,6 +23,58 @@ import pickle
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
 
+class GraphColoringInstanceV2:
+    def __init__(self, file_name: str,
+                 graph: nx.Graph, chromatic_number: Union[int, None],
+                 description: Union[str, None] = None, source: Union[str, None] = None,
+                 coloring: Union[list[int], None] = None):
+        self.file_name = file_name
+        self.graph = graph
+        self.chromatic_number = chromatic_number
+        if chromatic_number is None:
+            self.chromatic_number = "Unknown"
+        self.coloring = coloring
+
+        self.description = description
+        self.source = source
+
+    def convert_to_data(self, no_node_features: int = 1) -> Data:
+        # Create tensors for graph connectivity
+        edge_index = []
+        for edge in self.graph.edges():
+            node1, node2 = edge[0] - 1, edge[1] - 1
+            edge_index.append([node1, node2])
+        edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
+
+        # Create labels as the chromatic number
+        labels = torch.tensor(self.chromatic_number, dtype=torch.float)
+
+        features = torch.ones((self.graph.number_of_nodes(), no_node_features), dtype=torch.float)
+
+        return Data(x=features, edge_index=edge_index, y=labels, instance_file=self.file_name)
+
+    def __str__(self):
+        representation = ""
+        representation += f"\n\nFor instance {self.file_name} from {self.source}"
+        representation += f"\nDescription:\n{self.description}"
+        representation += f"\nGraph:{self.graph}"
+        representation += f"\nChromatic Number:{self.chromatic_number}"
+        return representation
+
+    def __repr__(self):
+        return self.__str__()
+
+
+def get_default_device():
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+        # For multi-gpu workstations, PyTorch will use the first available GPU (cuda:0), unless specified otherwise
+        # (cuda:1).
+    if torch.backends.mps.is_available():
+        return torch.device('mos')
+    return torch.device('cpu')
+
+
 def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
     """
     Create a graph as a nx.Graph instance.We assume nodes are from indexed from 1 to no_vertices
@@ -145,7 +197,9 @@ def generate_random_instances(no_instances: int,
         chromatic_number, coloring = find_chromatic_number(graph, False)
 
         random_instances.append(
-            GraphColoringInstance("", graph, chromatic_number, description="Randomly Generated", coloring=coloring))
+            GraphColoringInstance("", graph, chromatic_number, description="RG", coloring=coloring))
+
+        print(f"At {i}")
 
         # random_instances.append(convert_to_data(graph, chromatic_number, no_node_features))
 
@@ -157,6 +211,16 @@ def generate_random_instances(no_instances: int,
 
 def save_instances(instances: list[GraphColoringInstance], folder: str, dataset_name: str):
     file_path = folder + "\\" + dataset_name + ".pkl"
+    with open(file_path, 'wb') as file:
+        pickle.dump(instances, file)
+    file.close()
+
+
+def save_instances_as_V2(instances: list[GraphColoringInstance], folder: str, dataset_name: str):
+    file_path = folder + "\\" + dataset_name + ".pkl"
+    instances = [
+        GraphColoringInstanceV2(instance.file_name, instance.graph, instance.chromatic_number, instance.description,
+                                instance.source, instance.coloring) for instance in instances]
     with open(file_path, 'wb') as file:
         pickle.dump(instances, file)
     file.close()
@@ -183,12 +247,15 @@ def train(model, criterion, optimizer, train_loader):
     model.train()
 
     for data in train_loader:  # Iterate in batches over the training dataset.
-        prediction = model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
+        data = data.to(model.device, non_blocking=True)
         target = data.y.unsqueeze(1)
+
+        prediction = model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
+
         loss = criterion(prediction, target)  # Compute the loss.
         loss.backward()  # Derive gradients.
         optimizer.step()  # Update parameters based on gradients.
-        optimizer.zero_grad()  # Clear gradients.
+        optimizer.zero_grad(set_to_none=True)  # Clear gradients.
 
 
 def test(model, criterion, loader):
@@ -196,24 +263,36 @@ def test(model, criterion, loader):
 
     total_loss = 0
     for data in loader:  # Iterate in batches over the training/test dataset.
-        prediction = model(data.x, data.edge_index, data.batch)
+        data = data.to(model.device, non_blocking=True)
         target = data.y.unsqueeze(1)
+
+        with torch.no_grad():
+            prediction = model(data.x, data.edge_index, data.batch)
+
         loss = criterion(prediction, target)
         total_loss += loss.item()
     return total_loss
 
 
-def test_model(no_epochs: int,
+def test_model(no_epochs: int, train_batch_size: int,
+               instances: Union[list[Data], None],
+               train_percent: float,
                model, criterion, optimizer):
-    random_instances = generate_random_instances(no_instances=1000,
-                                                 no_nodes_interval=(30, 40),
-                                                 edges_percent=(0.075, 0.3))
-    train_dataset, left_instances = split_instances(random_instances, 0.7)
+    # random_instances = generate_random_instances(no_instances=1000,
+    #                                              no_nodes_interval=(30, 40),
+    #                                              edges_percent=(0.075, 0.3))
+
+    train_dataset, left_instances = split_instances(instances, train_percent)
     val_dataset, test_dataset = split_instances(left_instances, 0.5)
 
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    no_workers = 2
+    pin_memory = (model.device.type == 'cuda')
+    persistent_workers = (no_workers != 0)
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True,
+                              pin_memory=pin_memory, num_workers=no_workers, persistent_workers=persistent_workers,
+                              drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
 
     for epoch in range(1, no_epochs + 1):
         train(model, criterion, optimizer, train_loader)
@@ -231,9 +310,15 @@ def inference_on(model, criterion,
 
     total_loss = 0
     for instance in instances:  # Iterate in batches over the training/test dataset.
-        data = instance.convert_to_data()
-        prediction = model(data.x, data.edge_index, torch.zeros(data.num_nodes, dtype=torch.int64))
+        data = instance.convert_to_data().to(model.device, non_blocking=True)
+
+        with torch.no_grad():
+            prediction = model(data.x, data.edge_index,
+                               torch.zeros(data.num_nodes, dtype=torch.int64).to(model.device,
+                                                                                 non_blocking=True)).squeeze(0)
+
         target = data.y.unsqueeze(0)
+
         loss = criterion(prediction, target)
         total_loss += loss.item()
 
@@ -245,16 +330,16 @@ def inference_on(model, criterion,
 
 
 def create_dataset():
-    no_instances = 100_000
-    no_nodes_interval = (30, 65)
-    edges_percent = (0.075, 0.35)
+    no_instances = 10_000
+    no_nodes_interval = (30, 60)
+    edges_percent = (0.075, 0.2)
 
     dataset_folder = "Datasets"
-    dataset_name = "RG1"
+    dataset_name = "T1 RG 10k N 30-60 E 7,5-20"
 
-    start_time = time.time()
+    # start_time = time.time()
     instances = generate_random_instances(no_instances, no_nodes_interval, edges_percent)
-    print(f"Execution time {time.time() - start_time}")
+    # print(f"Execution time {time.time() - start_time}")
 
     save_instances(instances, dataset_folder, dataset_name)
 
@@ -315,27 +400,48 @@ if __name__ == '__main__':
     instance_folder = "Instances"
     instances_names = []
     instances_names += ["anna", "david", "huck", "jean", "homer"]
-    instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
-    instances_names += ["games120", "miles250"]
-    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9"]
-    instances_names += ["myciel3", "myciel4", "myciel5", "myciel6"]
+    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    # instances_names += ["games120", "miles250"]
+    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
+    instances_names += ["myciel5", "myciel6", "myciel7"]
+    instances_names += ["games120"]
     extension = ".col"
 
-    # no_epochs = 50
-    #
-    # model = GNNRegression2(hidden_channels=16)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    # criterion = torch.nn.MSELoss()
+    start_time = time.time()
+    # device = torch.device('cpu')
+    device = get_default_device()
+    # print(f"For device: {device}")
+
+    no_epochs = 10
+    train_batch_size = 128
+    train_percent = 0.8
+
+    model = GNNRegression3(device, no_hidden_units=32, layer_aggregation="add",
+                           global_layer_aggregation="mean",
+                           linear_layer_dropout=0.5)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    criterion = torch.nn.MSELoss()
+
+    dataset_folder = "Datasets"
+    dataset_name = "RG2 100k N 20-60 E 7,5-20"
+
+    dataset_instances = load_instances(dataset_folder, dataset_name)
+    dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
+
+    # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
 
     # random_instances = generate_random_instances(no_instances=500,
     #                                              no_nodes_interval=(10, 50),
     #                                              edges_percent=(0.05, 0.15))
-    # train_dataset, left_instances = split_instances(random_instances, 0.95)
-    # train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
-    # test_model(no_epochs, model, criterion, optimizer)
-    #
-    # inference_on(model, criterion, instance_folder, instances_names, extension)
+    test_model(no_epochs, train_batch_size,
+               dataset_instances, train_percent,
+               model, criterion, optimizer)
+
+    inference_on(model, criterion, instance_folder, instances_names, extension)
+
+    print(f"Execution time with {device}: {time.time() - start_time:.4f}")
 
     # instances = read_instances(instances_names, instance_folder, extension)
     # for instance in instances:
@@ -343,4 +449,4 @@ if __name__ == '__main__':
     #     no_edges = instance.graph.number_of_edges()
     #     print(f"{instance.file_name} - {no_edges / (no_nodes * (no_nodes - 1) // 2):.4f}")
 
-    create_dataset()
+    # create_dataset()
