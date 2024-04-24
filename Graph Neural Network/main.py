@@ -20,6 +20,12 @@ from GraphColoring import *
 
 import pickle
 
+import wandb
+
+from TrainingPipeline import TrainingPipeline
+
+import numpy as np
+
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
 
@@ -411,7 +417,147 @@ def balance_dataset(dataset: list[GraphColoringInstance], color_range: list[int,
     return new_dataset
 
 
+def get_sweep_params():
+    parameters_dict = {
+        'no_epochs': {
+            'value': 100
+        },
+        'model': {
+            'value': {
+                'no_hidden_units': 80,
+                'linear_layer_dropout': 0.25,
+                'conv_layer_dropout': 0.1
+            }
+        },
+        'layer_aggregation': {
+            'values': ["add", "max", "mean"]
+        },
+        'global_layer_aggregation': {
+            'values': ["add", "max", "mean"]
+        },
+        'train_batch_size': {
+            'values': [64, 128, 256, 512]
+        },
+        'lr': {
+            'value': 1e-3
+        },
+        'weight_decay': {
+            'distribution': 'uniform',
+            'min': 1e-4,
+            'max': 1e-1
+        }
+    }
+
+    return parameters_dict
+
+
+def run_sweep(dataset_folder: str, dataset_name: str,
+              no_searches: int, sweep_id: str = None,
+              device: torch.device = get_default_device()):
+    # Step 1
+    wandb.login()
+
+    sweep_config = {
+        'method': 'random'
+    }
+
+    metric = {
+        'name': 'validation_loss',
+        'goal': 'minimize'
+    }
+
+    sweep_config['metric'] = metric
+
+    sweep_config['parameters'] = get_sweep_params()
+
+    # Step 2
+    project_name = "EAA Graph Coloring Fine Tuning "
+    if sweep_id is None:
+        sweep_id = wandb.sweep(sweep_config, project=project_name)
+
+    print("Project name: ", project_name)
+    print("Sweep Id: ", sweep_id)
+
+    training_pipeline = TrainingPipeline(device, dataset_folder, dataset_name)
+
+    # Step 3
+    wandb.agent(sweep_id, training_pipeline.run_config, count=no_searches)
+
+
 if __name__ == '__main__':
+    instance_folder = "Instances"
+    instances_names = []
+    instances_names += ["anna", "david", "huck", "jean", "homer"]
+    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    # instances_names += ["games120", "miles250"]
+    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
+    instances_names += ["myciel5", "myciel6", "myciel7"]
+    instances_names += ["games120"]
+    extension = ".col"
+
+    start_time = time.time()
+    # device = torch.device('cpu')
+    device = get_default_device()
+    # print(f"For device: {device}")
+
+    no_epochs = 1
+    train_batch_size = 128
+    train_percent = 0.9
+
+    # model = GNNRegression3(device, no_hidden_units=80, layer_aggregation="add",
+    #                        global_layer_aggregation="mean",
+    #                        linear_layer_dropout=0.5, conv_layer_dropout=0.1)
+
+    # model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    # params = sum([np.prod(p.size()) for p in model_parameters])
+    # print(params)
+    #
+    # exit(1)
+
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # criterion = torch.nn.MSELoss()
+
+    dataset_folder = "Datasets"
+    # dataset_name = "RG2 B1 100k N 20-60 E 7,5-20"
+    dataset_name = "RG2 100k N 20-60 E 7,5-20"
+
+    run_sweep(dataset_folder, dataset_name, 50, device=device)
+
+    # dataset_instances = load_instances(dataset_folder, dataset_name)
+    # train_dataset, val_dataset = get_balanced_datasets(dataset_instances, train_percent)
+    # class_count = dict()
+    # for instance in train_dataset:
+    #     value = class_count.setdefault(instance.chromatic_number, 0)
+    #     class_count[instance.chromatic_number] = value + 1
+
+    # print(class_count)
+
+    # save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
+
+    # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
+
+    # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
+
+    # random_instances = generate_random_instances(no_instances=500,
+    #                                              no_nodes_interval=(10, 50),
+    #                                              edges_percent=(0.05, 0.15))
+
+    # test_model(no_epochs, train_batch_size,
+    #            dataset_instances, train_percent,
+    #            model, criterion, optimizer)
+    #
+    # inference_on(model, criterion, instance_folder, instances_names, extension)
+    #
+    # print(f"Execution time with {device}: {time.time() - start_time:.4f}")
+
+    # instances = read_instances(instances_names, instance_folder, extension)
+    # for instance in instances:
+    #     no_nodes = instance.graph.number_of_nodes()
+    #     no_edges = instance.graph.number_of_edges()
+    #     print(f"{instance.file_name} - {no_edges / (no_nodes * (no_nodes - 1) // 2):.4f}")
+
+    # create_dataset()
+
     # graph = nx.Graph()
     #
     # graph.add_nodes_from(range(1, 5 + 1))
@@ -462,68 +608,3 @@ if __name__ == '__main__':
     #     print(f"Execution time:{execution_time}")
     #     print(f"Found chromatic number:{chromatic_number}")
     #     print(f"Real chromatic number:{instance.chromatic_number}")
-
-    instance_folder = "Instances"
-    instances_names = []
-    instances_names += ["anna", "david", "huck", "jean", "homer"]
-    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
-    # instances_names += ["games120", "miles250"]
-    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
-    instances_names += ["myciel5", "myciel6", "myciel7"]
-    instances_names += ["games120"]
-    extension = ".col"
-
-    start_time = time.time()
-    # device = torch.device('cpu')
-    device = get_default_device()
-    # print(f"For device: {device}")
-
-    no_epochs = 10
-    train_batch_size = 128
-    train_percent = 0.5
-
-    model = GNNRegression3(device, no_hidden_units=32, layer_aggregation="add",
-                           global_layer_aggregation="mean",
-                           linear_layer_dropout=0.5)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = torch.nn.MSELoss()
-
-    dataset_folder = "Datasets"
-    dataset_name = "RG2 100k N 20-60 E 7,5-20"
-
-    dataset_instances = load_instances(dataset_folder, dataset_name)
-
-    dataset_instances = balance_dataset(dataset_instances, [3, 8])
-    class_count = dict()
-    for instance in dataset_instances:
-        value = class_count.setdefault(instance.chromatic_number, 0)
-        class_count[instance.chromatic_number] = value + 1
-
-    print(class_count)
-
-    save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
-
-    # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
-
-    # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
-
-    # random_instances = generate_random_instances(no_instances=500,
-    #                                              no_nodes_interval=(10, 50),
-    #                                              edges_percent=(0.05, 0.15))
-
-    # test_model(no_epochs, train_batch_size,
-    #            dataset_instances, train_percent,
-    #            model, criterion, optimizer)
-    #
-    # inference_on(model, criterion, instance_folder, instances_names, extension)
-
-    print(f"Execution time with {device}: {time.time() - start_time:.4f}")
-
-    # instances = read_instances(instances_names, instance_folder, extension)
-    # for instance in instances:
-    #     no_nodes = instance.graph.number_of_nodes()
-    #     no_edges = instance.graph.number_of_edges()
-    #     print(f"{instance.file_name} - {no_edges / (no_nodes * (no_nodes - 1) // 2):.4f}")
-
-    # create_dataset()

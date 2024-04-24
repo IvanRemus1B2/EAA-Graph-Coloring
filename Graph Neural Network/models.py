@@ -65,7 +65,8 @@ class GNNRegression2(torch.nn.Module):
 class GNNRegression3(torch.nn.Module):
     def __init__(self, device: torch.device,
                  no_hidden_units: int, layer_aggregation: str,
-                 global_layer_aggregation: str, linear_layer_dropout: float):
+                 global_layer_aggregation: str,
+                 linear_layer_dropout: float, conv_layer_dropout: float):
         super(GNNRegression3, self).__init__()
 
         self.device = device
@@ -83,71 +84,24 @@ class GNNRegression3(torch.nn.Module):
 
         self.global_layer_aggregation = global_layer_aggregation
         self.linear_layer_dropout = linear_layer_dropout
+        self.conv_layer_dropout = conv_layer_dropout
 
         self.to(device)
 
     def forward(self, x, edge_index, batch):
         x = self.conv1(x, edge_index)
         x = self.batch_norm1(x)
+        x = F.dropout(x, p=self.conv_layer_dropout, training=self.training)
         x = x.relu()
 
         x = self.conv2(x, edge_index)
         x = self.batch_norm2(x)
+        x = F.dropout(x, p=self.conv_layer_dropout, training=self.training)
         x = x.relu()
 
         x = self.conv3(x, edge_index)
         x = self.batch_norm3(x)
-
-        if self.global_layer_aggregation == "add":
-            x = global_add_pool(x, batch)
-        elif self.global_layer_aggregation == "max":
-            x = global_max_pool(x, batch)
-        else:
-            # Assume mean
-            x = global_mean_pool(x, batch)
-
-        x = F.dropout(x, p=self.linear_layer_dropout, training=self.training)
-        x = self.regression_layer(x)
-
-        return x
-
-
-class GNNClassifier(torch.nn.Module):
-    def __init__(self, device: torch.device,
-                 no_hidden_units: int, layer_aggregation: str,
-                 global_layer_aggregation: str, linear_layer_dropout: float,
-                 output: int):
-        super(GNNClassifier, self).__init__()
-
-        self.device = device
-
-        self.conv1 = GraphConv(1, no_hidden_units, aggr=layer_aggregation)
-        self.batch_norm1 = BatchNorm(no_hidden_units)
-
-        self.conv2 = GraphConv(no_hidden_units, no_hidden_units, aggr=layer_aggregation)
-        self.batch_norm2 = BatchNorm(no_hidden_units)
-
-        self.conv3 = GraphConv(no_hidden_units, no_hidden_units, aggr=layer_aggregation)
-        self.batch_norm3 = BatchNorm(no_hidden_units)
-
-        self.regression_layer = Linear(no_hidden_units, output)
-
-        self.global_layer_aggregation = global_layer_aggregation
-        self.linear_layer_dropout = linear_layer_dropout
-
-        self.to(device)
-
-    def forward(self, x, edge_index, batch):
-        x = self.conv1(x, edge_index)
-        x = self.batch_norm1(x)
-        x = x.relu()
-
-        x = self.conv2(x, edge_index)
-        x = self.batch_norm2(x)
-        x = x.relu()
-
-        x = self.conv3(x, edge_index)
-        x = self.batch_norm3(x)
+        x = F.dropout(x, p=self.conv_layer_dropout, training=self.training)
 
         if self.global_layer_aggregation == "add":
             x = global_add_pool(x, batch)

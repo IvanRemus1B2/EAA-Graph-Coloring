@@ -1,0 +1,2 @@
+C:\Users\simio\AppData\Local\Programs\Python\Python310\lib\site-packages\torch_geometric\warnings.py:11: UserWarning: The usage of `scatter(reduce='max')` can be accelerated via the 'torch-scatter' package, but it was not found
+  warnings.warn(message)
