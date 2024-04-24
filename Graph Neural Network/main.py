@@ -347,6 +347,70 @@ def create_dataset():
     # print(instances2)
 
 
+def balance_dataset(dataset: list[GraphColoringInstance], color_range: list[int, int]):
+    random.shuffle(dataset)
+
+    start_color, end_color = color_range
+    no_colors = end_color - start_color + 1
+    no_instances = len(dataset)
+    instances_per_color = no_instances // no_colors
+    leftover = []
+
+    new_dataset = []
+    assigned_instances_per_color = dict()
+    for index in range(start_color, end_color + 1):
+        assigned_instances_per_color[index] = 0
+
+    for instance in dataset:
+        instance_color = instance.chromatic_number
+        if instance_color < start_color or instance_color > end_color:
+            leftover.append(instance)
+            continue
+
+        count = assigned_instances_per_color.setdefault(instance_color, 0)
+        if count < instances_per_color:
+            new_dataset.append(instance)
+            assigned_instances_per_color[instance_color] = count + 1
+        else:
+            leftover.append(instance)
+
+    leftover.sort(key=lambda instance: instance.chromatic_number)
+
+    # print(assigned_instances_per_color)
+    print(f"Total: {len(leftover)}")
+    color_target = start_color
+    for index, leftover_instance in enumerate(leftover):
+        if index % 10 == 0:
+            print(f"At {index}")
+
+        while color_target <= end_color and assigned_instances_per_color[color_target] >= instances_per_color:
+            color_target += 1
+        color_target = min(end_color, color_target)
+
+        no_nodes = leftover_instance.graph.number_of_nodes()
+        selected_nodes = random.sample(population=range(1, no_nodes + 1), k=color_target)
+        for node1 in selected_nodes:
+            for node2 in selected_nodes:
+                if node1 != node2:
+                    leftover_instance.graph.add_edge(node1, node2)
+
+        # Add 40 more edges at random
+        for index2 in range(20):
+            node1, node2 = random.sample(population=range(1, no_nodes + 1), k=2)
+            if node1 != node2:
+                leftover_instance.graph.add_edge(node1, node2)
+
+        assigned_instances_per_color[color_target] += 1
+        leftover_instance.chromatic_number = color_target
+        leftover_instance.coloring = "-"
+
+        # leftover_instance.chromatic_number, leftover_instance.coloring = find_chromatic_number(leftover_instance.graph)
+
+        new_dataset.append(leftover_instance)
+
+    return new_dataset
+
+
 if __name__ == '__main__':
     # graph = nx.Graph()
     #
@@ -371,6 +435,8 @@ if __name__ == '__main__':
     # graph.add_edge(2, 3)
     # graph.add_edge(3, 4)
     # graph.add_edge(4, 1)
+    #
+    # print(graph.edges())
     # # is_colorable(graph, 3, False)
     # #
     # no_colors, coloring = find_chromatic_number(graph)
@@ -414,7 +480,7 @@ if __name__ == '__main__':
 
     no_epochs = 10
     train_batch_size = 128
-    train_percent = 0.8
+    train_percent = 0.5
 
     model = GNNRegression3(device, no_hidden_units=32, layer_aggregation="add",
                            global_layer_aggregation="mean",
@@ -427,7 +493,18 @@ if __name__ == '__main__':
     dataset_name = "RG2 100k N 20-60 E 7,5-20"
 
     dataset_instances = load_instances(dataset_folder, dataset_name)
-    dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
+
+    dataset_instances = balance_dataset(dataset_instances, [3, 8])
+    class_count = dict()
+    for instance in dataset_instances:
+        value = class_count.setdefault(instance.chromatic_number, 0)
+        class_count[instance.chromatic_number] = value + 1
+
+    print(class_count)
+
+    save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
+
+    # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
 
     # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
 
@@ -435,11 +512,11 @@ if __name__ == '__main__':
     #                                              no_nodes_interval=(10, 50),
     #                                              edges_percent=(0.05, 0.15))
 
-    test_model(no_epochs, train_batch_size,
-               dataset_instances, train_percent,
-               model, criterion, optimizer)
-
-    inference_on(model, criterion, instance_folder, instances_names, extension)
+    # test_model(no_epochs, train_batch_size,
+    #            dataset_instances, train_percent,
+    #            model, criterion, optimizer)
+    #
+    # inference_on(model, criterion, instance_folder, instances_names, extension)
 
     print(f"Execution time with {device}: {time.time() - start_time:.4f}")
 
