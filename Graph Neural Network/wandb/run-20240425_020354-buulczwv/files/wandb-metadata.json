@@ -1,0 +1,53 @@
+{
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.10.8",
+    "heartbeatAt": "2024-04-24T23:03:55.337473",
+    "startedAt": "2024-04-24T23:03:54.552821",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "D:\\Facultate\\Master\\Anul 1\\Semestrul 2\\Analiza Experimentala a Algoritmilor\\EAA-Graph-Coloring\\Graph Neural Network\\main.py",
+    "codePathLocal": "main.py",
+    "codePath": "Graph Neural Network\\main.py",
+    "git": {
+        "remote": "https://github.com/IvanRemus1B2/EAA-Graph-Coloring.git",
+        "commit": "6a65f4781b73164adc222f8728d5822a3c8358a8"
+    },
+    "email": "ivan.remus101@gmail.com",
+    "root": "D:/Facultate/Master/Anul 1/Semestrul 2/Analiza Experimentala a Algoritmilor/EAA-Graph-Coloring",
+    "host": "DESKTOP-4AJOCL6",
+    "username": "simio",
+    "executable": "C:\\Users\\simio\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+    "cpu_count": 6,
+    "cpu_count_logical": 12,
+    "cpu_freq": {
+        "current": 2592.0,
+        "min": 0.0,
+        "max": 2592.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2592.0,
+            "min": 0.0,
+            "max": 2592.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 195.80077743530273,
+            "used": 183.7404022216797
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 2060",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 2060",
+            "memory_total": 6442450944
+        }
+    ],
+    "memory": {
+        "total": 15.790481567382812
+    }
+}

@@ -1,0 +1,19 @@
+wandb_version: 1
+
+global_layer_aggregation:
+  value: add
+layer_aggregation:
+  value: add
+lr:
+  value: 0.001
+model:
+  value:
+    conv_layer_dropout: 0.1
+    linear_layer_dropout: 0.25
+    no_hidden_units: 80
+no_epochs:
+  value: 100
+train_batch_size:
+  value: 256
+weight_decay:
+  value: 0.051911565111848294

@@ -1,0 +1,35 @@
+2024-04-25 02:03:54,566 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Current SDK version is 0.15.12
+2024-04-25 02:03:54,566 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Configure stats pid to 25648
+2024-04-25 02:03:54,566 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Loading settings from C:\Users\simio\.config\wandb\settings
+2024-04-25 02:03:54,566 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Loading settings from D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\wandb\settings
+2024-04-25 02:03:54,566 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Loading settings from environment variables: {'project': 'EAA Graph Coloring Fine Tuning ', 'entity': 'hugs-for-bugs', 'root_dir': 'D:\\Facultate\\Master\\Anul 1\\Semestrul 2\\Analiza Experimentala a Algoritmilor\\EAA-Graph-Coloring\\Graph Neural Network', 'run_id': 'buulczwv', 'sweep_param_path': 'D:\\Facultate\\Master\\Anul 1\\Semestrul 2\\Analiza Experimentala a Algoritmilor\\EAA-Graph-Coloring\\Graph Neural Network\\wandb\\sweep-dvd7zen6\\config-buulczwv.yaml', 'sweep_id': 'dvd7zen6'}
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Applying setup settings: {'_disable_service': False}
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'Graph Neural Network\\main.py', 'program_abspath': 'D:\\Facultate\\Master\\Anul 1\\Semestrul 2\\Analiza Experimentala a Algoritmilor\\EAA-Graph-Coloring\\Graph Neural Network\\main.py', 'program': 'D:\\Facultate\\Master\\Anul 1\\Semestrul 2\\Analiza Experimentala a Algoritmilor\\EAA-Graph-Coloring\\Graph Neural Network\\main.py'}
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_init.py:_log_setup():528] Logging user logs to D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\wandb\run-20240425_020354-buulczwv\logs\debug.log
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_init.py:_log_setup():529] Logging internal logs to D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\wandb\run-20240425_020354-buulczwv\logs\debug-internal.log
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():568] calling init triggers
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():575] wandb.init called with sweep_config: {'global_layer_aggregation': 'mean', 'layer_aggregation': 'max', 'lr': 0.001, 'model': {'conv_layer_dropout': 0.1, 'linear_layer_dropout': 0.25, 'no_hidden_units': 80}, 'no_epochs': 100, 'train_batch_size': 256, 'weight_decay': 0.0204323988227938}
+config: {}
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():618] starting backend
+2024-04-25 02:03:54,567 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():622] setting up manager
+2024-04-25 02:03:54,573 INFO    Thread-60 (_run_job):25648 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=spawn, using: spawn
+2024-04-25 02:03:54,574 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():628] backend started and connected
+2024-04-25 02:03:54,586 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_config_callback():1324] config_cb None None {'global_layer_aggregation': 'mean', 'layer_aggregation': 'max', 'lr': 0.001, 'model': {'conv_layer_dropout': 0.1, 'linear_layer_dropout': 0.25, 'no_hidden_units': 80}, 'no_epochs': 100, 'train_batch_size': 256, 'weight_decay': 0.0204323988227938}
+2024-04-25 02:03:54,587 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():720] updated telemetry
+2024-04-25 02:03:54,673 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():753] communicating run to backend with 90.0 second timeout
+2024-04-25 02:03:55,111 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_on_init():2220] communicating current version
+2024-04-25 02:03:55,279 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_on_init():2229] got version response upgrade_message: "wandb version 0.16.6 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2024-04-25 02:03:55,279 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():804] starting run threads in backend
+2024-04-25 02:03:55,505 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_console_start():2199] atexit reg
+2024-04-25 02:03:55,505 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_redirect():2054] redirect: wrap_raw
+2024-04-25 02:03:55,505 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_redirect():2119] Wrapping output streams.
+2024-04-25 02:03:55,505 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_redirect():2144] Redirects installed.
+2024-04-25 02:03:55,506 INFO    Thread-60 (_run_job):25648 [wandb_init.py:init():845] run started, returning control to user process
+2024-04-25 02:39:02,256 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_finish():1934] finishing run hugs-for-bugs/EAA Graph Coloring Fine Tuning /buulczwv
+2024-04-25 02:39:02,256 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_atexit_cleanup():2168] got exitcode: 0
+2024-04-25 02:39:02,257 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_restore():2151] restore
+2024-04-25 02:39:02,257 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_restore():2157] restore done
+2024-04-25 02:39:06,419 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_footer_history_summary_info():3599] rendering history
+2024-04-25 02:39:06,420 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_footer_history_summary_info():3631] rendering summary
+2024-04-25 02:39:06,426 INFO    Thread-60 (_run_job):25648 [wandb_run.py:_footer_sync_info():3558] logging synced files

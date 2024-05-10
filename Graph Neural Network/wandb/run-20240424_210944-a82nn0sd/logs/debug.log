@@ -26,3 +26,10 @@ config: {}
 2024-04-24 21:09:46,540 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_redirect():2119] Wrapping output streams.
 2024-04-24 21:09:46,541 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_redirect():2144] Redirects installed.
 2024-04-24 21:09:46,541 INFO    Thread-11 (_run_job):25648 [wandb_init.py:init():845] run started, returning control to user process
+2024-04-24 21:35:02,684 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_finish():1934] finishing run hugs-for-bugs/EAA Graph Coloring Fine Tuning /a82nn0sd
+2024-04-24 21:35:02,686 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_atexit_cleanup():2168] got exitcode: 0
+2024-04-24 21:35:02,688 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_restore():2151] restore
+2024-04-24 21:35:02,691 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_restore():2157] restore done
+2024-04-24 21:35:07,376 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_footer_history_summary_info():3599] rendering history
+2024-04-24 21:35:07,376 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_footer_history_summary_info():3631] rendering summary
+2024-04-24 21:35:07,383 INFO    Thread-11 (_run_job):25648 [wandb_run.py:_footer_sync_info():3558] logging synced files

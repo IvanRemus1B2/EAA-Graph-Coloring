@@ -26,6 +26,8 @@ from TrainingPipeline import TrainingPipeline
 
 import numpy as np
 
+from enum import Enum
+
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
 
@@ -353,7 +355,15 @@ def create_dataset():
     # print(instances2)
 
 
-def balance_dataset(dataset: list[GraphColoringInstance], color_range: list[int, int]):
+class BalanceType(Enum):
+    CLIQUE = 0,
+    CLIQUE_RANDOM_EDGES = 1,
+    RANDOM_EDGES = 2
+
+
+def balance_dataset(dataset: list[GraphColoringInstance], color_range: list[int, int],
+                    balance_type: BalanceType, no_random_edges: int,
+                    verbose: bool = 0):
     random.shuffle(dataset)
 
     start_color, end_color = color_range
@@ -383,10 +393,11 @@ def balance_dataset(dataset: list[GraphColoringInstance], color_range: list[int,
     leftover.sort(key=lambda instance: instance.chromatic_number)
 
     # print(assigned_instances_per_color)
-    print(f"Total: {len(leftover)}")
+    if verbose:
+        print(f"Total: {len(leftover)}")
     color_target = start_color
     for index, leftover_instance in enumerate(leftover):
-        if index % 10 == 0:
+        if verbose and index % 20 == 0:
             print(f"At {index}")
 
         while color_target <= end_color and assigned_instances_per_color[color_target] >= instances_per_color:
@@ -394,27 +405,47 @@ def balance_dataset(dataset: list[GraphColoringInstance], color_range: list[int,
         color_target = min(end_color, color_target)
 
         no_nodes = leftover_instance.graph.number_of_nodes()
-        selected_nodes = random.sample(population=range(1, no_nodes + 1), k=color_target)
-        for node1 in selected_nodes:
-            for node2 in selected_nodes:
+        if balance_type == BalanceType.CLIQUE or balance_type == BalanceType.CLIQUE_RANDOM_EDGES:
+            selected_nodes = random.sample(population=range(1, no_nodes + 1), k=color_target)
+            for node1 in selected_nodes:
+                for node2 in selected_nodes:
+                    if node1 != node2:
+                        leftover_instance.graph.add_edge(node1, node2)
+
+        if balance_type == BalanceType.CLIQUE_RANDOM_EDGES or balance_type == BalanceType.RANDOM_EDGES:
+            # Add 40 more edges at random
+            for index2 in range(no_random_edges):
+                node1, node2 = random.sample(population=range(1, no_nodes + 1), k=2)
                 if node1 != node2:
                     leftover_instance.graph.add_edge(node1, node2)
 
-        # Add 40 more edges at random
-        for index2 in range(20):
-            node1, node2 = random.sample(population=range(1, no_nodes + 1), k=2)
-            if node1 != node2:
-                leftover_instance.graph.add_edge(node1, node2)
-
         assigned_instances_per_color[color_target] += 1
-        leftover_instance.chromatic_number = color_target
-        leftover_instance.coloring = "-"
-
-        # leftover_instance.chromatic_number, leftover_instance.coloring = find_chromatic_number(leftover_instance.graph)
+        leftover_instance.chromatic_number, leftover_instance.coloring = find_chromatic_number(leftover_instance.graph)
 
         new_dataset.append(leftover_instance)
 
     return new_dataset
+
+
+def print_dataset_distribution(dataset: list[GraphColoringInstance], dataset_name: str):
+    print(f"For {dataset_name}")
+    class_count = dict()
+    for instance in dataset:
+        value = class_count.setdefault(instance.chromatic_number, 0)
+        class_count[instance.chromatic_number] = value + 1
+
+    print(class_count)
+
+
+def create_balanced_dataset_from(from_dataset_named: str, color_range: list[int, int], balance_type: BalanceType,
+                                 no_random_edges: int, verbose: bool = False):
+    dataset_folder = "Datasets"
+
+    dataset_instances = load_instances(dataset_folder, from_dataset_named)
+    print_dataset_distribution(dataset_instances, from_dataset_named)
+    balanced_dataset = balance_dataset(dataset_instances, color_range, balance_type, no_random_edges, verbose)
+
+    save_instances(balanced_dataset, dataset_folder, str(balance_type) + " " + from_dataset_named)
 
 
 def get_sweep_params():
@@ -504,39 +535,31 @@ if __name__ == '__main__':
     train_batch_size = 128
     train_percent = 0.9
 
-    # model = GNNRegression3(device, no_hidden_units=80, layer_aggregation="add",
-    #                        global_layer_aggregation="mean",
-    #                        linear_layer_dropout=0.5, conv_layer_dropout=0.1)
+    model = GNNRegression3(device, no_hidden_units=80, layer_aggregation="add",
+                           global_layer_aggregation="mean",
+                           linear_layer_dropout=0.5, conv_layer_dropout=0.1)
 
-    # model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    # params = sum([np.prod(p.size()) for p in model_parameters])
-    # print(params)
-    #
-    # exit(1)
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # criterion = torch.nn.MSELoss()
 
     dataset_folder = "Datasets"
-    # dataset_name = "RG2 B1 100k N 20-60 E 7,5-20"
-    dataset_name = "RG2 100k N 20-60 E 7,5-20"
+    dataset_name = "RG1 10k N 30-60 E 7,5-20"
 
-    run_sweep(dataset_folder, dataset_name, 50, device=device)
+    color_range = [3, 8]
+    balance_type = BalanceType.RANDOM_EDGES
+    no_random_edges = 10
 
-    # dataset_instances = load_instances(dataset_folder, dataset_name)
-    # train_dataset, val_dataset = get_balanced_datasets(dataset_instances, train_percent)
-    # class_count = dict()
-    # for instance in train_dataset:
-    #     value = class_count.setdefault(instance.chromatic_number, 0)
-    #     class_count[instance.chromatic_number] = value + 1
-
-    # print(class_count)
-
+    create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
     # save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
 
     # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
 
     # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
+
+    # run_sweep(dataset_folder, dataset_name, 50, device=device)
 
     # random_instances = generate_random_instances(no_instances=500,
     #                                              no_nodes_interval=(10, 50),
