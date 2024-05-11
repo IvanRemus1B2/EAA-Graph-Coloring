@@ -378,8 +378,8 @@ if __name__ == '__main__':
     dataset_name = "RG1 10k N 30-60 E 7,5-20"
 
     color_range = [3, 8]
-    balance_type = BalanceType.CLIQUE
-    no_random_edges = 10
+    balance_type = BalanceType.RANDOM_EDGES
+    no_random_edges = 15
 
     create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
 
