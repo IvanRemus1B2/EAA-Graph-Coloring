@@ -28,6 +28,8 @@ import numpy as np
 
 from enum import Enum
 
+import matplotlib.pyplot as plt
+
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
 
@@ -187,36 +189,6 @@ def convert_to_data(graph: nx.Graph, chromatic_number: int, no_node_features: in
     return Data(x=features, edge_index=edge_index, y=labels)
 
 
-def generate_random_instances(no_instances: int,
-                              no_nodes_interval: tuple[int, int], edges_percent: tuple[float, float],
-                              no_node_features: int = 1):
-    random_instances = []
-    start_time = time.time()
-
-    min_nodes, max_nodes = no_nodes_interval
-    min_edges_percent, max_edges_percent = edges_percent
-
-    for i in range(no_instances):
-        num_nodes = random.randint(min_nodes, max_nodes)
-        max_num_edges = num_nodes * (num_nodes - 1) / 2
-        num_edges = random.randint(int(max_num_edges * min_edges_percent), int(max_num_edges * max_edges_percent))
-        graph = generate_random_graph(num_nodes, num_edges)
-
-        chromatic_number, coloring = find_chromatic_number(graph, False)
-
-        random_instances.append(
-            GraphColoringInstance("", graph, chromatic_number, description="RG", coloring=coloring))
-
-        print(f"At {i}")
-
-        # random_instances.append(convert_to_data(graph, chromatic_number, no_node_features))
-
-    return random_instances
-    # execution_time = time.time() - start_time
-
-    # print(f"Execution time:{execution_time}")
-
-
 def save_instances(instances: list[GraphColoringInstance], folder: str, dataset_name: str):
     file_path = folder + "\\" + dataset_name + ".pkl"
     with open(file_path, 'wb') as file:
@@ -241,24 +213,6 @@ def load_instances(folder: str, dataset_name: str):
     file.close()
 
     return instances
-
-
-def create_dataset():
-    no_instances = 10_000
-    no_nodes_interval = (30, 60)
-    edges_percent = (0.075, 0.2)
-
-    dataset_folder = "Datasets"
-    dataset_name = "T1 RG 10k N 30-60 E 7,5-20"
-
-    # start_time = time.time()
-    instances = generate_random_instances(no_instances, no_nodes_interval, edges_percent)
-    # print(f"Execution time {time.time() - start_time}")
-
-    save_instances(instances, dataset_folder, dataset_name)
-
-    # instances2 = load_instances(dataset_folder, dataset_name)
-    # print(instances2)
 
 
 class BalanceType(Enum):
@@ -371,18 +325,104 @@ def create_balanced_dataset_from(from_dataset_named: str, color_range: list[int,
     save_instances(balanced_dataset, dataset_folder, balanced_dataset_name)
 
 
+def generate_random_graph_v2(no_nodes: int, no_edges: int):
+    graph = nx.Graph()
+    nodes = range(1, no_nodes + 1)
+    graph.add_nodes_from(nodes)
+
+    possible_edges = list(nx.non_edges(graph))
+    random.shuffle(possible_edges)
+
+    for index in range(min(no_edges, len(possible_edges))):
+        u, v = possible_edges[index]
+        graph.add_edge(u, v)
+
+    # Draw graph
+    # nx.draw(graph, with_labels=True)
+    # plt.show()
+
+    return graph
+
+
+def create_dataset_with_least_chromatic_number(no_instances: int,
+                                               nodes_range: tuple[int, int], no_edges_percent: tuple[float, float],
+                                               least_chromatic_number: int,
+                                               balance_type: BalanceType, random_edges_to_add: int,
+                                               verbose: bool = False) -> \
+        list[GraphColoringInstance]:
+    instances = []
+    min_nodes, max_nodes = nodes_range
+    min_edges_percent, max_edges_percent = no_edges_percent
+
+    balance_str = str(balance_type).split(".")[1]
+    description = f"RG C-{no_instances} N {min_nodes}-{max_nodes} E {min_edges_percent:.2f}-{max_edges_percent:.2f} {balance_str} LCN {least_chromatic_number}"
+
+    for index in range(no_instances):
+        if verbose:
+            print(f"At {index}")
+        no_nodes = random.randint(min_nodes, max_nodes)
+        max_no_edges = no_nodes * (no_nodes - 1) / 2
+        no_edges = random.randint(int(max_no_edges * min_edges_percent), int(max_no_edges * max_edges_percent))
+        graph = generate_random_graph_v2(no_nodes, no_edges)
+
+        chromatic_number, coloring = find_chromatic_number(graph, False)
+
+        edges_to_add = list(nx.non_edges(graph))
+        random.shuffle(edges_to_add)
+        index_edge = 0
+
+        while chromatic_number < least_chromatic_number:
+            if balance_type == BalanceType.CLIQUE or balance_type == BalanceType.CLIQUE_RANDOM_EDGES:
+                selected_nodes = random.sample(population=range(1, no_nodes + 1), k=least_chromatic_number)
+                for node1 in selected_nodes:
+                    for node2 in selected_nodes:
+                        if node1 != node2:
+                            graph.add_edge(node1, node2)
+
+            if balance_type == BalanceType.CLIQUE_RANDOM_EDGES or balance_type == BalanceType.RANDOM_EDGES:
+                left_to_add = random_edges_to_add
+                while index_edge < len(edges_to_add) and left_to_add > 0:
+                    u, v = edges_to_add[index_edge]
+                    graph.add_edge(u, v)
+                    index_edge += 1
+                    left_to_add -= 1
+
+            chromatic_number, coloring = find_chromatic_number(graph, False)
+
+        # nx.draw(graph, with_labels=True)
+        # plt.show()
+        # print(index+1," ",coloring)
+        # print(coloring)
+
+        instances.append(GraphColoringInstance("", graph, chromatic_number, description, "", coloring))
+
+    return instances
+
+
 if __name__ == '__main__':
     start_time = time.time()
 
     dataset_folder = "Datasets"
-    dataset_name = "RG1 10k N 30-60 E 7,5-20"
+    # dataset_name = "RG1 10k N 30-60 E 7,5-20"
+    #
+    # color_range = [3, 8]
+    # balance_type = BalanceType.RANDOM_EDGES
+    # no_random_edges = 15
+    #
+    # create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
 
-    color_range = [3, 8]
-    balance_type = BalanceType.RANDOM_EDGES
-    no_random_edges = 15
+    #
 
-    create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
+    least_chromatic_number = 5
+    no_instances = 10_000
+    instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
+                                                           BalanceType.RANDOM_EDGES, 25, True)
 
+    save_instances(instances, dataset_folder, f"RG1 C-{no_instances} LCN-{least_chromatic_number}")
+
+    # instances = load_instances(dataset_folder, "RG1 1 LCN-5")
+
+    print(instances)
     end_time = time.time()
     print("Execution time: ", end_time - start_time)
 
