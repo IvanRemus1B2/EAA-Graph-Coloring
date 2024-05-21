@@ -411,18 +411,23 @@ if __name__ == '__main__':
     #
     # create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
 
-    #
-
-    least_chromatic_number = 5
-    no_instances = 10_000
+    least_chromatic_number = 3
+    no_instances = 25_000
     instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
-                                                           BalanceType.RANDOM_EDGES, 25, True)
+                                                           BalanceType.RANDOM_EDGES, 15, True)
 
-    save_instances(instances, dataset_folder, f"RG1 C-{no_instances} LCN-{least_chromatic_number}")
+    save_instances(instances, dataset_folder, f"RG2 C-{no_instances} LCN-{least_chromatic_number}")
+
+    least_chromatic_number = 4
+    no_instances = 25_000
+    instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
+                                                           BalanceType.RANDOM_EDGES, 15, True)
+
+    save_instances(instances, dataset_folder, f"RG2 C-{no_instances} LCN-{least_chromatic_number}")
 
     # instances = load_instances(dataset_folder, "RG1 1 LCN-5")
 
-    print(instances)
+    # print(instances)
     end_time = time.time()
     print("Execution time: ", end_time - start_time)
 
