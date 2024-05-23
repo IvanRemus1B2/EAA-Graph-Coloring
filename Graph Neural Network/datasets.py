@@ -399,51 +399,35 @@ def create_dataset_with_least_chromatic_number(no_instances: int,
     return instances
 
 
-def combine_save_dataset():
-    dataset = []
-    dataset_folder = "Datasets"
-    dataset_names = ["RG2 C-25000 LCN-3", "RG2 C-25000 LCN-4", "RG2 C-15000 LCN-5", "RG1 C-10000 LCN-5",
-                     "RG2 C-10000 LCN-6", "RG2 C-15000 LCN-6"]
-    for dataset_name in dataset_names:
-        dataset += load_instances(dataset_folder, dataset_name)
-
-    save_instances(dataset, dataset_folder, "RE B 100k with 3-6 CN")
-
-
 if __name__ == '__main__':
-    # combine_save_dataset()
     start_time = time.time()
-    #
+
     dataset_folder = "Datasets"
-    dataset_name = "RE B 100k with 3-6 CN"
-
-    instances = load_instances(dataset_folder, dataset_name)
-
-    print_dataset_distribution(instances, dataset_name)
-
+    # dataset_name = "RG1 10k N 30-60 E 7,5-20"
+    #
     # color_range = [3, 8]
     # balance_type = BalanceType.RANDOM_EDGES
     # no_random_edges = 15
     #
     # create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
 
-    # least_chromatic_number = 3
-    # no_instances = 25_000
-    # instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
-    #                                                        BalanceType.RANDOM_EDGES, 15, True)
-    #
-    # save_instances(instances, dataset_folder, f"RG2 C-{no_instances} LCN-{least_chromatic_number}")
-    #
-    # least_chromatic_number = 4
-    # no_instances = 25_000
-    # instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
-    #                                                        BalanceType.RANDOM_EDGES, 15, True)
-    #
-    # save_instances(instances, dataset_folder, f"RG2 C-{no_instances} LCN-{least_chromatic_number}")
-    #
-    # # instances = load_instances(dataset_folder, "RG1 1 LCN-5")
-    #
-    # # print(instances)
+    least_chromatic_number = 3
+    no_instances = 25_000
+    instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
+                                                           BalanceType.RANDOM_EDGES, 15, True)
+
+    save_instances(instances, dataset_folder, f"RG2 C-{no_instances} LCN-{least_chromatic_number}")
+
+    least_chromatic_number = 4
+    no_instances = 25_000
+    instances = create_dataset_with_least_chromatic_number(no_instances, (30, 80), (0.05, 0.2), least_chromatic_number,
+                                                           BalanceType.RANDOM_EDGES, 15, True)
+
+    save_instances(instances, dataset_folder, f"RG2 C-{no_instances} LCN-{least_chromatic_number}")
+
+    # instances = load_instances(dataset_folder, "RG1 1 LCN-5")
+
+    # print(instances)
     end_time = time.time()
     print("Execution time: ", end_time - start_time)
 

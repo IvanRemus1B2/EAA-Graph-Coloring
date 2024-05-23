@@ -531,7 +531,7 @@ if __name__ == '__main__':
     device = get_default_device()
     # print(f"For device: {device}")
 
-    no_epochs = 50
+    no_epochs = 1
     train_batch_size = 128
     train_percent = 0.9
 
@@ -542,22 +542,20 @@ if __name__ == '__main__':
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
 
-    optimizer = torch.optim.Adam(model.parameters())
-    criterion = torch.nn.MSELoss()
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # criterion = torch.nn.MSELoss()
 
     dataset_folder = "Datasets"
-    # dataset_name = "RE B 100k with 3-6 CN"
-    dataset_name = "RG2 100k N 20-60 E 7,5-20"
+    dataset_name = "RG1 10k N 30-60 E 7,5-20"
 
-    # color_range = [3, 8]
-    # balance_type = BalanceType.RANDOM_EDGES
-    # no_random_edges = 10
-    #
-    # create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
+    color_range = [3, 8]
+    balance_type = BalanceType.RANDOM_EDGES
+    no_random_edges = 10
+
+    create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
     # save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
 
-    instances = load_instances(dataset_folder, dataset_name)
-    dataset_instances = [instance.convert_to_data() for instance in instances]
+    # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
 
     # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
 
@@ -567,13 +565,13 @@ if __name__ == '__main__':
     #                                              no_nodes_interval=(10, 50),
     #                                              edges_percent=(0.05, 0.15))
 
-    test_model(no_epochs, train_batch_size,
-               dataset_instances, train_percent,
-               model, criterion, optimizer)
-
-    inference_on(model, criterion, instance_folder, instances_names, extension)
-
-    print(f"Execution time with {device}: {time.time() - start_time:.4f}")
+    # test_model(no_epochs, train_batch_size,
+    #            dataset_instances, train_percent,
+    #            model, criterion, optimizer)
+    #
+    # inference_on(model, criterion, instance_folder, instances_names, extension)
+    #
+    # print(f"Execution time with {device}: {time.time() - start_time:.4f}")
 
     # instances = read_instances(instances_names, instance_folder, extension)
     # for instance in instances:
@@ -633,5 +631,3 @@ if __name__ == '__main__':
     #     print(f"Execution time:{execution_time}")
     #     print(f"Found chromatic number:{chromatic_number}")
     #     print(f"Real chromatic number:{instance.chromatic_number}")
-
-# First results for RE B 100k with 3-6 CN:
