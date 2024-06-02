@@ -7,8 +7,13 @@ from torch_geometric.nn import global_add_pool
 from torch_geometric.nn import global_max_pool
 from torch_geometric.nn import GraphConv
 from torch_geometric.nn import BatchNorm
+from enum import Enum
 
 __all__ = ["GNNRegression1", "GNNRegression2", "GNNRegression3"]
+
+
+class ModelArchitecture(Enum):
+    BasicLayers = 0
 
 
 class GNNRegression1(torch.nn.Module):

@@ -1,0 +1,31 @@
+C:\Users\simio\AppData\Local\Programs\Python\Python310\python.exe "D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\main.py"
+For device: cuda
+Dataset name:RG1 C-100 LCN-6
+no epochs:1,batch_size:128,train_percentage:0.9
+Name:T1
+type:BasicLayers,no_node_features:1,no_hidden_units:80)
+linear_layer_dropout:0.25,conv_layer_dropout:0.1
+No Params:26561
+For RG1 C-100 LCN-6
+{6: 100}
+Epoch: 001, Train Loss: 0.0000, Val Loss: 53.1459, Test Loss: 51.5578
+For anna: Target:11.0 , Prediction:-0.6368
+For david: Target:11.0 , Prediction:-0.8531
+For huck: Target:11.0 , Prediction:-0.8235
+For jean: Target:10.0 , Prediction:-0.5903
+For homer: Target:13.0 , Prediction:-0.4673
+For queen5_5: Target:5.0 , Prediction:-1.3909
+For queen6_6: Target:7.0 , Prediction:-1.5972
+For queen7_7: Target:7.0 , Prediction:-1.4425
+For queen8_12: Target:12.0 , Prediction:1.5190
+For queen8_8: Target:9.0 , Prediction:-0.7806
+For queen9_9: Target:10.0 , Prediction:0.5224
+For queen13_13: Target:13.0 , Prediction:14.3018
+For myciel5: Target:6.0 , Prediction:-1.0625
+For myciel6: Target:7.0 , Prediction:-1.9373
+For myciel7: Target:8.0 , Prediction:-2.7152
+For games120: Target:9.0 , Prediction:-1.0467
+Total loss for files:1537.7976
+Execution time:6.8483
+
+Process finished with exit code 0

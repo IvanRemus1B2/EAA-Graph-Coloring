@@ -28,6 +28,8 @@ import numpy as np
 
 from enum import Enum
 
+from models import ModelArchitecture
+
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
 
@@ -293,14 +295,14 @@ def test_model(no_epochs: int, train_batch_size: int,
     train_dataset, left_instances = split_instances(instances, train_percent)
     val_dataset, test_dataset = split_instances(left_instances, 0.5)
 
-    no_workers = 2
+    no_workers = 1
     pin_memory = (model.device.type == 'cuda')
     persistent_workers = (no_workers != 0)
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True,
                               pin_memory=pin_memory, num_workers=no_workers, persistent_workers=persistent_workers,
                               drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 
     for epoch in range(1, no_epochs + 1):
         train(model, criterion, optimizer, train_loader)
@@ -312,6 +314,7 @@ def test_model(no_epochs: int, train_batch_size: int,
 
 def inference_on(model, criterion,
                  instance_folder: str, instance_names: list[str], extension: str):
+    print("\nInference:")
     model.eval()
 
     instances = read_instances(instance_names, instance_folder, extension)
@@ -515,7 +518,111 @@ def run_sweep(dataset_folder: str, dataset_name: str,
     wandb.agent(sweep_id, training_pipeline.run_config, count=no_searches)
 
 
-if __name__ == '__main__':
+def save_model(model, model_path: str):
+    model_scripted = torch.jit.script(model)  # Export to TorchScript
+    model_scripted.save(model_path + ".pt")  # Save
+
+
+def load_model(model_path: str):
+    model = torch.jit.load(model_path + ".pt")
+    model.eval()
+    return model
+
+
+def create_train_model():
+    instance_folder = "Instances"
+    dataset_folder = "Datasets"
+    models_folder = "Models"
+
+    instances_names = []
+    instances_names += ["anna", "david", "huck", "jean", "homer"]
+    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    # instances_names += ["games120", "miles250"]
+    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
+    instances_names += ["myciel5", "myciel6", "myciel7"]
+    instances_names += ["games120"]
+    extension = ".col"
+
+    start_time = time.time()
+    # device = torch.device('cpu')
+    device = get_default_device()
+
+    no_epochs = 200
+    train_batch_size = 128
+    train_percent = 0.9
+
+    dataset_name = "RE B 100k with 3-6 CN"
+    # dataset_name = "RG1 C-100 LCN-6"
+    # dataset_name = "RE B 100k with 3-6 CN"
+
+    model_name = "1"
+    model_architecture = ModelArchitecture.BasicLayers
+
+    no_hidden_units = 80
+    linear_layer_dropout = 0.25
+    conv_layer_dropout = 0.1
+    no_node_features = 1
+
+    learning_rate = 1e-3
+
+    # -----------------
+
+    print(f"For device: {device}")
+    print(f"Dataset name:{dataset_name}")
+    model_architecture_str = str(model_architecture).split(".")[1]
+    print(f"no epochs:{no_epochs},batch_size:{train_batch_size},train_percentage:{train_percent}")
+
+    model = GNNRegression3(device, no_hidden_units=no_hidden_units, layer_aggregation="add",
+                           global_layer_aggregation="mean",
+                           linear_layer_dropout=linear_layer_dropout, conv_layer_dropout=conv_layer_dropout)
+
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+    print(f"Name:{model_name}")
+    print(f"type:{model_architecture_str},no_node_features:{no_node_features},no_hidden_units:{no_hidden_units})")
+    print(f"linear_layer_dropout:{linear_layer_dropout},conv_layer_dropout:{conv_layer_dropout}")
+    print(f"No Params:{params}")
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    criterion = torch.nn.MSELoss()
+
+    dataset = load_instances(dataset_folder, dataset_name)
+    print_dataset_distribution(dataset, dataset_name)
+
+    dataset_instances = [instance.convert_to_data(no_node_features) for instance in dataset]
+    del dataset
+
+    test_model(no_epochs, train_batch_size,
+               dataset_instances, train_percent,
+               model, criterion, optimizer)
+
+    model_path = (
+                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
+
+    save_model(model, model_path)
+
+    test_model_from(instance_folder, instances_names, models_folder, model_architecture_str, model_name, extension)
+
+    print(f"Execution time:{time.time() - start_time:.4f}")
+
+
+def test_model_from(instances_folder: str, instances_names: list[str],
+                    models_folder: str, model_architecture_str: str, model_name: str,
+                    extension: str = ".col"):
+    start_time = time.time()
+
+    model_path = (
+                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
+    model = load_model(model_path)
+
+    criterion = torch.nn.MSELoss()
+
+    inference_on(model, criterion, instances_folder, instances_names, extension)
+
+    print(f"Execution time:{time.time() - start_time:.4f}")
+
+
+def main():
     instance_folder = "Instances"
     instances_names = []
     instances_names += ["anna", "david", "huck", "jean", "homer"]
@@ -546,13 +653,13 @@ if __name__ == '__main__':
     # criterion = torch.nn.MSELoss()
 
     dataset_folder = "Datasets"
-    dataset_name = "RG1 10k N 30-60 E 7,5-20"
+    dataset_name = "RE B 100k with 3-6 CN"
 
-    color_range = [3, 8]
-    balance_type = BalanceType.RANDOM_EDGES
-    no_random_edges = 10
+    # color_range = [3, 8]
+    # balance_type = BalanceType.RANDOM_EDGES
+    # no_random_edges = 10
 
-    create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
+    # create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
     # save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
 
     # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
@@ -564,7 +671,7 @@ if __name__ == '__main__':
     # random_instances = generate_random_instances(no_instances=500,
     #                                              no_nodes_interval=(10, 50),
     #                                              edges_percent=(0.05, 0.15))
-
+    # dataset = load_instances(dataset_folder, dataset_name)
     # test_model(no_epochs, train_batch_size,
     #            dataset_instances, train_percent,
     #            model, criterion, optimizer)
@@ -631,3 +738,8 @@ if __name__ == '__main__':
     #     print(f"Execution time:{execution_time}")
     #     print(f"Found chromatic number:{chromatic_number}")
     #     print(f"Real chromatic number:{instance.chromatic_number}")
+
+
+if __name__ == '__main__':
+    create_train_model()
+    # main()
