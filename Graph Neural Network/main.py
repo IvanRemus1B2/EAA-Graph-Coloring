@@ -245,17 +245,47 @@ def load_instances(folder: str, dataset_name: str):
     return instances
 
 
-def split_instances(data_list, split_percent: float):
-    random.shuffle(data_list)
+def split_instances(data_list, train_percent: float):
+    label_positions = dict()
+    all_labels = []
     no_instances = len(data_list)
-    split_point = int(no_instances * split_percent)
+    for index in range(no_instances):
+        label = int(data_list[index].y.item())
+        if label in label_positions:
+            label_positions[label].append(index)
+        else:
+            label_positions[label] = [index]
+            all_labels.append(label)
 
-    return data_list[:split_point], data_list[split_point:]
+    for label in all_labels:
+        random.shuffle(label_positions[label])
+
+    train_instances = []
+    val_instances = []
+
+    found = True
+    position = 0
+    add_train_left = int(train_percent * no_instances)
+    while found:
+        found = False
+        for _, positions in label_positions.items():
+            if position < len(positions):
+                found = True
+                if add_train_left > 0:
+                    train_instances.append(data_list[positions[position]])
+                    add_train_left -= 1
+                else:
+                    val_instances.append(data_list[positions[position]])
+        position += 1
+
+    return train_instances, val_instances
 
 
-def train(model, criterion, optimizer, train_loader):
+def train(model, criterion, optimizer, train_loader, ):
     model.train()
 
+    total_loss = 0.0
+    no_batches = 0
     for data in train_loader:  # Iterate in batches over the training dataset.
         data = data.to(model.device, non_blocking=True)
         target = data.y.unsqueeze(1)
@@ -265,7 +295,10 @@ def train(model, criterion, optimizer, train_loader):
         loss = criterion(prediction, target)  # Compute the loss.
         loss.backward()  # Derive gradients.
         optimizer.step()  # Update parameters based on gradients.
+        total_loss += loss.item()
         optimizer.zero_grad(set_to_none=True)  # Clear gradients.
+
+    return total_loss
 
 
 def test(model, criterion, loader):
@@ -288,12 +321,8 @@ def test_model(no_epochs: int, train_batch_size: int,
                instances: Union[list[Data], None],
                train_percent: float,
                model, criterion, optimizer):
-    # random_instances = generate_random_instances(no_instances=1000,
-    #                                              no_nodes_interval=(30, 40),
-    #                                              edges_percent=(0.075, 0.3))
-
-    train_dataset, left_instances = split_instances(instances, train_percent)
-    val_dataset, test_dataset = split_instances(left_instances, 0.5)
+    train_dataset, val_dataset = split_instances(instances, train_percent)
+    no_train_instances, no_val_instances = len(train_dataset), len(val_dataset)
 
     no_workers = 1
     pin_memory = (model.device.type == 'cuda')
@@ -301,15 +330,12 @@ def test_model(no_epochs: int, train_batch_size: int,
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True,
                               pin_memory=pin_memory, num_workers=no_workers, persistent_workers=persistent_workers,
                               drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 
     for epoch in range(1, no_epochs + 1):
-        train(model, criterion, optimizer, train_loader)
-        train_loss = test(model, criterion, train_loader)
-        val_loss = test(model, criterion, val_loader)
-        test_loss = test(model, criterion, test_loader)
-        print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Test Loss: {test_loss:.4f}')
+        train_loss = train(model, criterion, optimizer, train_loader) / no_train_instances
+        val_loss = test(model, criterion, val_loader) / no_val_instances
+        print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
 
 
 def inference_on(model, criterion,
@@ -319,9 +345,13 @@ def inference_on(model, criterion,
 
     instances = read_instances(instance_names, instance_folder, extension)
 
+    init_no_node_features = model.no_units_per_gc_layer[0]
+
+    errors = np.zeros(len(instance_names))
+
     total_loss = 0
-    for instance in instances:  # Iterate in batches over the training/test dataset.
-        data = instance.convert_to_data().to(model.device, non_blocking=True)
+    for index, instance in enumerate(instances):  # Iterate in batches over the training/test dataset.
+        data = instance.convert_to_data(no_node_features=init_no_node_features).to(model.device, non_blocking=True)
 
         with torch.no_grad():
             prediction = model(data.x, data.edge_index,
@@ -332,12 +362,15 @@ def inference_on(model, criterion,
 
         loss = criterion(prediction, target)
         total_loss += loss.item()
+        errors[index] = np.abs((target - prediction).item())
 
         file_name = instance.file_name
 
-        print(f"For {file_name}: Target:{target.item()} , Prediction:{prediction.item():.4f}")
+        print(f"{file_name} -> Target:{target.item()} , Prediction:{prediction.item():.4f} , Error:{errors[index]:.4f}")
 
-    print(f"Total loss for files:{total_loss:.4f}")
+    print(f"Total loss for files: {total_loss:.4f}")
+    print(f"Total MAE score: {np.sum(errors)}")
+    print(f"All errors: {errors}")
 
 
 def create_dataset():
@@ -519,12 +552,15 @@ def run_sweep(dataset_folder: str, dataset_name: str,
 
 
 def save_model(model, model_path: str):
-    model_scripted = torch.jit.script(model)  # Export to TorchScript
-    model_scripted.save(model_path + ".pt")  # Save
+    torch.save(model, model_path + ".pth")
+    # model_scripted = torch.jit.script(model)  # Export to TorchScript
+    # model_scripted.save(model_path + ".pt")  # Save
 
 
 def load_model(model_path: str):
-    model = torch.jit.load(model_path + ".pt")
+    # model = torch.jit.load(model_path + ".pt")
+    # model.eval()
+    model = torch.load(model_path + ".pth")
     model.eval()
     return model
 
@@ -547,21 +583,28 @@ def create_train_model():
     # device = torch.device('cpu')
     device = get_default_device()
 
-    no_epochs = 200
-    train_batch_size = 128
+    no_epochs = 10
+    train_batch_size = 64
     train_percent = 0.9
 
     dataset_name = "RE B 100k with 3-6 CN"
     # dataset_name = "RG1 C-100 LCN-6"
-    # dataset_name = "RE B 100k with 3-6 CN"
+    # dataset_name = "RG2 100k N 20-60 E 7,5-20"
 
-    model_name = "1"
+    model_name = "RE 3"
     model_architecture = ModelArchitecture.BasicLayers
 
-    no_hidden_units = 80
-    linear_layer_dropout = 0.25
-    conv_layer_dropout = 0.1
-    no_node_features = 1
+    hyper_parameters = {
+        'no_units_per_gc_layer': [128, 128, 128],
+        'no_node_features': 128,
+
+        'no_units_per_dense_layer': [],
+
+        'layer_aggregation': "add",
+        'global_layer_aggregation': "mean",
+    }
+    # linear_layer_dropout = 0.25
+    # conv_layer_dropout = 0.1
 
     learning_rate = 1e-3
 
@@ -572,15 +615,17 @@ def create_train_model():
     model_architecture_str = str(model_architecture).split(".")[1]
     print(f"no epochs:{no_epochs},batch_size:{train_batch_size},train_percentage:{train_percent}")
 
-    model = GNNRegression3(device, no_hidden_units=no_hidden_units, layer_aggregation="add",
-                           global_layer_aggregation="mean",
-                           linear_layer_dropout=linear_layer_dropout, conv_layer_dropout=conv_layer_dropout)
+    model = GNNBasicLayers(device, no_units_per_gc_layer=hyper_parameters['no_units_per_gc_layer'],
+                           no_units_per_dense_layer=hyper_parameters['no_units_per_dense_layer'],
+                           layer_aggregation=hyper_parameters['layer_aggregation'],
+                           global_layer_aggregation=hyper_parameters['global_layer_aggregation'])
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
     print(f"Name:{model_name}")
-    print(f"type:{model_architecture_str},no_node_features:{no_node_features},no_hidden_units:{no_hidden_units})")
-    print(f"linear_layer_dropout:{linear_layer_dropout},conv_layer_dropout:{conv_layer_dropout}")
+    print(f"type:{model_architecture_str}")
+    print(f"Hyper parameters:{hyper_parameters}")
+    # print(f"linear_layer_dropout:{linear_layer_dropout},conv_layer_dropout:{conv_layer_dropout}")
     print(f"No Params:{params}")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -589,7 +634,7 @@ def create_train_model():
     dataset = load_instances(dataset_folder, dataset_name)
     print_dataset_distribution(dataset, dataset_name)
 
-    dataset_instances = [instance.convert_to_data(no_node_features) for instance in dataset]
+    dataset_instances = [instance.convert_to_data(hyper_parameters['no_node_features']) for instance in dataset]
     del dataset
 
     test_model(no_epochs, train_batch_size,
@@ -620,124 +665,6 @@ def test_model_from(instances_folder: str, instances_names: list[str],
     inference_on(model, criterion, instances_folder, instances_names, extension)
 
     print(f"Execution time:{time.time() - start_time:.4f}")
-
-
-def main():
-    instance_folder = "Instances"
-    instances_names = []
-    instances_names += ["anna", "david", "huck", "jean", "homer"]
-    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
-    # instances_names += ["games120", "miles250"]
-    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
-    instances_names += ["myciel5", "myciel6", "myciel7"]
-    instances_names += ["games120"]
-    extension = ".col"
-
-    start_time = time.time()
-    # device = torch.device('cpu')
-    device = get_default_device()
-    # print(f"For device: {device}")
-
-    no_epochs = 1
-    train_batch_size = 128
-    train_percent = 0.9
-
-    model = GNNRegression3(device, no_hidden_units=80, layer_aggregation="add",
-                           global_layer_aggregation="mean",
-                           linear_layer_dropout=0.5, conv_layer_dropout=0.1)
-
-    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
-
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    # criterion = torch.nn.MSELoss()
-
-    dataset_folder = "Datasets"
-    dataset_name = "RE B 100k with 3-6 CN"
-
-    # color_range = [3, 8]
-    # balance_type = BalanceType.RANDOM_EDGES
-    # no_random_edges = 10
-
-    # create_balanced_dataset_from(dataset_name, color_range, balance_type, no_random_edges, True)
-    # save_instances(dataset_instances, dataset_folder, "RG2 B1 100k N 20-60 E 7,5-20")
-
-    # dataset_instances = [instance.convert_to_data() for instance in dataset_instances]
-
-    # save_instances_as_V2(dataset_instances, dataset_folder, "RG2 100k N 20-60 E 7,5-20 V2")
-
-    # run_sweep(dataset_folder, dataset_name, 50, device=device)
-
-    # random_instances = generate_random_instances(no_instances=500,
-    #                                              no_nodes_interval=(10, 50),
-    #                                              edges_percent=(0.05, 0.15))
-    # dataset = load_instances(dataset_folder, dataset_name)
-    # test_model(no_epochs, train_batch_size,
-    #            dataset_instances, train_percent,
-    #            model, criterion, optimizer)
-    #
-    # inference_on(model, criterion, instance_folder, instances_names, extension)
-    #
-    # print(f"Execution time with {device}: {time.time() - start_time:.4f}")
-
-    # instances = read_instances(instances_names, instance_folder, extension)
-    # for instance in instances:
-    #     no_nodes = instance.graph.number_of_nodes()
-    #     no_edges = instance.graph.number_of_edges()
-    #     print(f"{instance.file_name} - {no_edges / (no_nodes * (no_nodes - 1) // 2):.4f}")
-
-    # create_dataset()
-
-    # graph = nx.Graph()
-    #
-    # graph.add_nodes_from(range(1, 5 + 1))
-    #
-    # graph.add_edge(1, 2)
-    # graph.add_edge(2, 3)
-    # graph.add_edge(3, 4)
-    # graph.add_edge(4, 5)
-    # graph.add_edge(5, 1)
-    # # is_colorable(graph, 2, True)
-    #
-    # no_colors, coloring = find_chromatic_number(graph)
-    # print(no_colors)
-    # print(coloring)
-    #
-    # graph = nx.Graph()
-    #
-    # graph.add_nodes_from(range(1, 4 + 1))
-    #
-    # graph.add_edge(1, 2)
-    # graph.add_edge(2, 3)
-    # graph.add_edge(3, 4)
-    # graph.add_edge(4, 1)
-    #
-    # print(graph.edges())
-    # # is_colorable(graph, 3, False)
-    # #
-    # no_colors, coloring = find_chromatic_number(graph)
-    # print(no_colors)
-    # print(coloring)
-
-    # instance_folder = "Instances"
-    # instances_names = []
-    # # instances_names += ["anna", "david", "huck", "jean","homer"]
-    # # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
-    # # instances_names += ["games120", "miles250"]
-    # # instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12"]
-    # # instances_names += ["myciel3", "myciel4"]
-    # extension = ".col"
-    # instances = read_instances(instances_names, instance_folder, extension)
-    # for instance in instances:
-    #     print(f"\n\nInstance name:{instance.file_name}")
-    #
-    #     start_time = time.time()
-    #     chromatic_number, _ = find_chromatic_number(instance.graph, False)
-    #     execution_time = time.time() - start_time
-    #
-    #     print(f"Execution time:{execution_time}")
-    #     print(f"Found chromatic number:{chromatic_number}")
-    #     print(f"Real chromatic number:{instance.chromatic_number}")
 
 
 if __name__ == '__main__':

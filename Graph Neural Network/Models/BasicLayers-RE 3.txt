@@ -1,0 +1,45 @@
+C:\Users\simio\AppData\Local\Programs\Python\Python310\python.exe "D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\main.py"
+For device: cuda
+Dataset name:RE B 100k with 3-6 CN
+no epochs:10,batch_size:64,train_percentage:0.9
+Name:RE 3
+type:BasicLayers
+Hyper parameters:{'no_units_per_gc_layer': [128, 128, 128], 'no_node_features': 128, 'no_units_per_dense_layer': [], 'layer_aggregation': 'add', 'global_layer_aggregation': 'mean'}
+No Params:66433
+For RE B 100k with 3-6 CN
+{4: 29175, 3: 8954, 5: 33302, 6: 28518, 7: 51}
+Epoch: 001, Train Loss: 0.0079, Val Loss: 0.0026
+Epoch: 002, Train Loss: 0.0017, Val Loss: 0.0024
+Epoch: 003, Train Loss: 0.0016, Val Loss: 0.0014
+Epoch: 004, Train Loss: 0.0016, Val Loss: 0.0027
+Epoch: 005, Train Loss: 0.0016, Val Loss: 0.0015
+Epoch: 006, Train Loss: 0.0016, Val Loss: 0.0026
+Epoch: 007, Train Loss: 0.0016, Val Loss: 0.0015
+Epoch: 008, Train Loss: 0.0016, Val Loss: 0.0015
+Epoch: 009, Train Loss: 0.0016, Val Loss: 0.0019
+Epoch: 010, Train Loss: 0.0015, Val Loss: 0.0021
+
+Inference:
+anna -> Target:11.0 , Prediction:3.7662 , Error:7.2338
+david -> Target:11.0 , Prediction:5.3078 , Error:5.6922
+huck -> Target:11.0 , Prediction:4.7485 , Error:6.2515
+jean -> Target:10.0 , Prediction:4.1194 , Error:5.8806
+homer -> Target:13.0 , Prediction:3.4579 , Error:9.5421
+queen5_5 -> Target:5.0 , Prediction:6.2934 , Error:1.2934
+queen6_6 -> Target:7.0 , Prediction:6.7997 , Error:0.2003
+queen7_7 -> Target:7.0 , Prediction:6.8532 , Error:0.1468
+queen8_12 -> Target:12.0 , Prediction:7.1443 , Error:4.8557
+queen8_8 -> Target:9.0 , Prediction:6.8422 , Error:2.1578
+queen9_9 -> Target:10.0 , Prediction:6.8779 , Error:3.1221
+queen13_13 -> Target:13.0 , Prediction:7.9529 , Error:5.0471
+myciel5 -> Target:6.0 , Prediction:5.3667 , Error:0.6333
+myciel6 -> Target:7.0 , Prediction:7.2321 , Error:0.2321
+myciel7 -> Target:8.0 , Prediction:8.2698 , Error:0.2698
+games120 -> Target:9.0 , Prediction:5.7481 , Error:3.2519
+Total loss for files: 325.7365
+Total MAE score: 55.81063175201416
+All errors: [7.23384857 5.6922121  6.25149536 5.8806076  9.54209518 1.29341412
+ 0.20026493 0.1468029  4.85571814 2.15775013 3.122118   5.04711294
+ 0.6333375  0.23208284 0.2698307  3.25194073]
+Execution time:0.1968
+Execution time:718.0871

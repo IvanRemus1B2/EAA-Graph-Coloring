@@ -1,0 +1,60 @@
+C:\Users\simio\AppData\Local\Programs\Python\Python310\python.exe "D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\main.py"
+For device: cuda
+Dataset name:RE B 100k with 3-6 CN
+no epochs:25,batch_size:128,train_percentage:0.9
+Name:RE 2
+type:BasicLayers
+Hyper parameters:{'no_units_per_gc_layer': [128, 128, 128], 'no_node_features': 128, 'no_units_per_dense_layer': [], 'layer_aggregation': 'add', 'global_layer_aggregation': 'mean'}
+No Params:66433
+For RE B 100k with 3-6 CN
+{4: 29175, 3: 8954, 5: 33302, 6: 28518, 7: 51}
+Epoch: 001, Train Loss: 88.8143, Val Loss: 5.0266, Test Loss: 4.9684
+Epoch: 002, Train Loss: 75.2491, Val Loss: 4.2415, Test Loss: 4.1948
+Epoch: 003, Train Loss: 69.2772, Val Loss: 3.9749, Test Loss: 3.8768
+Epoch: 004, Train Loss: 109.7101, Val Loss: 6.2376, Test Loss: 6.1327
+Epoch: 005, Train Loss: 66.4088, Val Loss: 3.8117, Test Loss: 3.7031
+Epoch: 006, Train Loss: 65.4090, Val Loss: 3.7376, Test Loss: 3.6455
+Epoch: 007, Train Loss: 66.8277, Val Loss: 3.8339, Test Loss: 3.7239
+Epoch: 008, Train Loss: 72.6406, Val Loss: 4.1669, Test Loss: 4.0427
+Epoch: 009, Train Loss: 65.1520, Val Loss: 3.6985, Test Loss: 3.6373
+Epoch: 010, Train Loss: 64.9901, Val Loss: 3.6846, Test Loss: 3.6157
+Epoch: 011, Train Loss: 87.1911, Val Loss: 4.9945, Test Loss: 4.8677
+Epoch: 012, Train Loss: 64.4629, Val Loss: 3.6789, Test Loss: 3.5905
+Epoch: 013, Train Loss: 64.6852, Val Loss: 3.6823, Test Loss: 3.6033
+Epoch: 014, Train Loss: 65.7544, Val Loss: 3.7177, Test Loss: 3.6595
+Epoch: 015, Train Loss: 72.7268, Val Loss: 4.1682, Test Loss: 4.0694
+Epoch: 016, Train Loss: 68.6788, Val Loss: 3.8987, Test Loss: 3.8211
+Epoch: 017, Train Loss: 110.6034, Val Loss: 6.3400, Test Loss: 6.2803
+Epoch: 018, Train Loss: 79.3801, Val Loss: 4.5255, Test Loss: 4.4778
+Epoch: 019, Train Loss: 70.9678, Val Loss: 4.0542, Test Loss: 3.9678
+Epoch: 020, Train Loss: 70.4616, Val Loss: 3.9967, Test Loss: 3.9251
+Epoch: 021, Train Loss: 67.5765, Val Loss: 3.8659, Test Loss: 3.7650
+Epoch: 022, Train Loss: 73.5924, Val Loss: 4.1856, Test Loss: 4.1389
+Epoch: 023, Train Loss: 65.7512, Val Loss: 3.7482, Test Loss: 3.6699
+Epoch: 024, Train Loss: 71.5410, Val Loss: 4.0559, Test Loss: 4.0228
+Epoch: 025, Train Loss: 69.7856, Val Loss: 3.9450, Test Loss: 3.8789
+
+Inference:
+anna -> Target:11.0 , Prediction:3.4789 , Error:7.5211
+david -> Target:11.0 , Prediction:4.8196 , Error:6.1804
+huck -> Target:11.0 , Prediction:4.2897 , Error:6.7103
+jean -> Target:10.0 , Prediction:3.9579 , Error:6.0421
+homer -> Target:13.0 , Prediction:3.1422 , Error:9.8578
+queen5_5 -> Target:5.0 , Prediction:5.8883 , Error:0.8883
+queen6_6 -> Target:7.0 , Prediction:6.0939 , Error:0.9061
+queen7_7 -> Target:7.0 , Prediction:5.8744 , Error:1.1256
+queen8_12 -> Target:12.0 , Prediction:5.4001 , Error:6.5999
+queen8_8 -> Target:9.0 , Prediction:5.5826 , Error:3.4174
+queen9_9 -> Target:10.0 , Prediction:5.3298 , Error:4.6702
+queen13_13 -> Target:13.0 , Prediction:4.5813 , Error:8.4187
+myciel5 -> Target:6.0 , Prediction:5.1608 , Error:0.8392
+myciel6 -> Target:7.0 , Prediction:6.5854 , Error:0.4146
+myciel7 -> Target:8.0 , Prediction:6.8073 , Error:1.1927
+games120 -> Target:9.0 , Prediction:5.5046 , Error:3.4954
+Total loss for files: 438.7936
+Total MAE score: 68.27998065948486
+All errors: [7.52113152 6.18039989 6.71029663 6.04211712 9.85778618 0.88828087
+ 0.90608931 1.12561226 6.5999403  3.41742992 4.67021561 8.4187355
+ 0.83924294 0.41461086 1.19269085 3.49540091]
+Execution time:0.1496
+Execution time:1710.7798

@@ -101,7 +101,7 @@ class TrainingPipeline:
             no_epochs = config.no_epochs
             train_batch_size = config.train_batch_size
 
-            model = GNNRegression3(self.device, **config.model,
+            model = GNNBasicLayers(self.device, **config.model,
                                    layer_aggregation=config.layer_aggregation,
                                    global_layer_aggregation=config.global_layer_aggregation)
 
