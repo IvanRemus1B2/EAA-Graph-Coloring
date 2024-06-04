@@ -1,0 +1,62 @@
+C:\Users\simio\AppData\Local\Programs\Python\Python310\python.exe "D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\main.py"
+For device: cuda
+Dataset name:RE B 100k with 3-6 CN
+no epochs:25,batch_size:64,train_percentage:0.9
+Name:RE 4
+type:BasicLayers
+Hyper parameters:{'no_units_per_gc_layer': [128, 128, 128], 'no_node_features': 128, 'no_units_per_dense_layer': [128, 64], 'layer_aggregation': 'add', 'global_layer_aggregation': 'mean'}
+No Params:91521
+For RE B 100k with 3-6 CN
+{4: 29175, 3: 8954, 5: 33302, 6: 28518, 7: 51}
+Epoch: 001, Train Loss: 0.0213, Val Loss: 0.0016
+Epoch: 002, Train Loss: 0.0016, Val Loss: 0.0017
+Epoch: 003, Train Loss: 0.0015, Val Loss: 0.0014
+Epoch: 004, Train Loss: 0.0015, Val Loss: 0.0015
+Epoch: 005, Train Loss: 0.0014, Val Loss: 0.0013
+Epoch: 006, Train Loss: 0.0014, Val Loss: 0.0014
+Epoch: 007, Train Loss: 0.0014, Val Loss: 0.0012
+Epoch: 008, Train Loss: 0.0014, Val Loss: 0.0012
+Epoch: 009, Train Loss: 0.0013, Val Loss: 0.0012
+Epoch: 010, Train Loss: 0.0013, Val Loss: 0.0014
+Epoch: 011, Train Loss: 0.0013, Val Loss: 0.0013
+Epoch: 012, Train Loss: 0.0013, Val Loss: 0.0012
+Epoch: 013, Train Loss: 0.0013, Val Loss: 0.0012
+Epoch: 014, Train Loss: 0.0012, Val Loss: 0.0012
+Epoch: 015, Train Loss: 0.0012, Val Loss: 0.0013
+Epoch: 016, Train Loss: 0.0012, Val Loss: 0.0011
+Epoch: 017, Train Loss: 0.0012, Val Loss: 0.0013
+Epoch: 018, Train Loss: 0.0012, Val Loss: 0.0012
+Epoch: 019, Train Loss: 0.0012, Val Loss: 0.0012
+Epoch: 020, Train Loss: 0.0012, Val Loss: 0.0012
+Epoch: 021, Train Loss: 0.0012, Val Loss: 0.0014
+Epoch: 022, Train Loss: 0.0012, Val Loss: 0.0011
+Epoch: 023, Train Loss: 0.0012, Val Loss: 0.0011
+Epoch: 024, Train Loss: 0.0012, Val Loss: 0.0012
+Epoch: 025, Train Loss: 0.0012, Val Loss: 0.0011
+
+Inference:
+anna -> Target:11.0 , Prediction:4.9592 , Error:6.0408
+david -> Target:11.0 , Prediction:5.3932 , Error:5.6068
+huck -> Target:11.0 , Prediction:5.0733 , Error:5.9267
+jean -> Target:10.0 , Prediction:5.1422 , Error:4.8578
+homer -> Target:13.0 , Prediction:3.5248 , Error:9.4752
+queen5_5 -> Target:5.0 , Prediction:6.0360 , Error:1.0360
+queen6_6 -> Target:7.0 , Prediction:5.9144 , Error:1.0856
+queen7_7 -> Target:7.0 , Prediction:4.7027 , Error:2.2973
+queen8_12 -> Target:12.0 , Prediction:-10.0642 , Error:22.0642
+queen8_8 -> Target:9.0 , Prediction:0.6970 , Error:8.3030
+queen9_9 -> Target:10.0 , Prediction:-5.4588 , Error:15.4588
+queen13_13 -> Target:13.0 , Prediction:-35.8390 , Error:48.8390
+myciel5 -> Target:6.0 , Prediction:5.1976 , Error:0.8024
+myciel6 -> Target:7.0 , Prediction:6.0818 , Error:0.9182
+myciel7 -> Target:8.0 , Prediction:2.8912 , Error:5.1088
+games120 -> Target:9.0 , Prediction:5.8075 , Error:3.1925
+Total loss for files: 3441.7323
+Total MAE score: 141.01309871673584
+All errors: [ 6.04080868  5.60678005  5.92670155  4.85778141  9.47523689  1.03597069
+  1.08556557  2.29728985 22.06418991  8.30301189 15.45879936 48.83901596
+  0.80239677  0.91819477  5.10881996  3.1925354 ]
+Execution time:0.1763
+Execution time:1397.3726
+
+Process finished with exit code 0

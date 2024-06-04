@@ -285,7 +285,6 @@ def train(model, criterion, optimizer, train_loader, ):
     model.train()
 
     total_loss = 0.0
-    no_batches = 0
     for data in train_loader:  # Iterate in batches over the training dataset.
         data = data.to(model.device, non_blocking=True)
         target = data.y.unsqueeze(1)
@@ -293,9 +292,9 @@ def train(model, criterion, optimizer, train_loader, ):
         prediction = model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
 
         loss = criterion(prediction, target)  # Compute the loss.
+        total_loss += loss.item()
         loss.backward()  # Derive gradients.
         optimizer.step()  # Update parameters based on gradients.
-        total_loss += loss.item()
         optimizer.zero_grad(set_to_none=True)  # Clear gradients.
 
     return total_loss
@@ -333,8 +332,8 @@ def test_model(no_epochs: int, train_batch_size: int,
     val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 
     for epoch in range(1, no_epochs + 1):
-        train_loss = train(model, criterion, optimizer, train_loader) / no_train_instances
-        val_loss = test(model, criterion, val_loader) / no_val_instances
+        train_loss = train(model, criterion, optimizer, train_loader)
+        val_loss = test(model, criterion, val_loader)
         print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
 
 
@@ -583,22 +582,22 @@ def create_train_model():
     # device = torch.device('cpu')
     device = get_default_device()
 
-    no_epochs = 10
+    no_epochs = 25
     train_batch_size = 64
     train_percent = 0.9
 
-    dataset_name = "RE B 100k with 3-6 CN"
+    # dataset_name = "RE B 100k with 3-6 CN"
     # dataset_name = "RG1 C-100 LCN-6"
-    # dataset_name = "RG2 100k N 20-60 E 7,5-20"
+    dataset_name = "RG2 100k N 20-60 E 7,5-20"
 
-    model_name = "RE 3"
+    model_name = "RG2 2"
     model_architecture = ModelArchitecture.BasicLayers
 
     hyper_parameters = {
         'no_units_per_gc_layer': [128, 128, 128],
         'no_node_features': 128,
 
-        'no_units_per_dense_layer': [],
+        'no_units_per_dense_layer': [64],
 
         'layer_aggregation': "add",
         'global_layer_aggregation': "mean",
