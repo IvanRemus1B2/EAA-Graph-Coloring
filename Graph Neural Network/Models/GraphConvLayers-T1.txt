@@ -1,0 +1,64 @@
+C:\Users\simio\AppData\Local\Programs\Python\Python310\python.exe "D:\Facultate\Master\Anul 1\Semestrul 2\Analiza Experimentala a Algoritmilor\EAA-Graph-Coloring\Graph Neural Network\main.py"
+For device: cuda
+Dataset name:RG1 10k N 30-60 E 7,5-20
+no epochs:25,batch_size:32,train_percentage:0.9
+Name:T1
+type:GraphConvLayers
+Hyper parameters:{'no_units_per_gc_layer': [128, 128, 128], 'no_node_features': 128, 'no_units_per_dense_layer': [], 'layer_aggregation': 'add', 'global_layer_aggregation': 'mean', 'gc_layer_dropout': 0.5}
+No Params:66433
+For RG1 10k N 30-60 E 7,5-20
+{4: 5844, 5: 1772, 3: 2383, 6: 1}
+Epoch 1: 100%|██████████| 281/281 [00:10<00:00, 26.81it/s, Train Loss=210, Val Loss=84.2, Info=Improved from inf to 84.2081]
+Epoch 2: 100%|██████████| 281/281 [00:01<00:00, 182.33it/s, Train Loss=85.7, Val Loss=80.2, Info=Improved from 84.2081 to 80.1789]
+Epoch 3: 100%|██████████| 281/281 [00:01<00:00, 190.85it/s, Train Loss=84.3, Val Loss=69.1, Info=Improved from 80.1789 to 69.0684]
+Epoch 4: 100%|██████████| 281/281 [00:01<00:00, 191.24it/s, Train Loss=84.1, Val Loss=85.2, Info=No improvement]
+Epoch 5: 100%|██████████| 281/281 [00:01<00:00, 163.48it/s, Train Loss=84, Val Loss=78.3, Info=No improvement]
+Epoch 6: 100%|██████████| 281/281 [00:01<00:00, 161.21it/s, Train Loss=82.7, Val Loss=73.8, Info=No improvement]
+Epoch 7: 100%|██████████| 281/281 [00:01<00:00, 146.72it/s, Train Loss=83.1, Val Loss=74.1, Info=No improvement]
+Epoch 8: 100%|██████████| 281/281 [00:01<00:00, 158.81it/s, Train Loss=83.3, Val Loss=83.1, Info=No improvement]
+Epoch 9: 100%|██████████| 281/281 [00:01<00:00, 154.71it/s, Train Loss=81, Val Loss=84.6, Info=No improvement]
+Epoch 10: 100%|██████████| 281/281 [00:01<00:00, 154.00it/s, Train Loss=81.4, Val Loss=77.2, Info=No improvement]
+Epoch 11: 100%|██████████| 281/281 [00:01<00:00, 151.31it/s, Train Loss=81.9, Val Loss=72, Info=No improvement]
+Epoch 12: 100%|██████████| 281/281 [00:01<00:00, 150.92it/s, Train Loss=80.6, Val Loss=74.9, Info=No improvement]
+Epoch 13: 100%|██████████| 281/281 [00:01<00:00, 171.56it/s, Train Loss=81.9, Val Loss=71.1, Info=No improvement]
+Epoch 14: 100%|██████████| 281/281 [00:01<00:00, 148.81it/s, Train Loss=82.2, Val Loss=67.5, Info=Improved from 69.0684 to 67.5016]
+Epoch 15: 100%|██████████| 281/281 [00:01<00:00, 157.89it/s, Train Loss=81.4, Val Loss=69.7, Info=No improvement]
+Epoch 16: 100%|██████████| 281/281 [00:01<00:00, 164.10it/s, Train Loss=82, Val Loss=71.8, Info=No improvement]
+Epoch 17: 100%|██████████| 281/281 [00:01<00:00, 182.97it/s, Train Loss=82, Val Loss=88.5, Info=No improvement]
+Epoch 18: 100%|██████████| 281/281 [00:01<00:00, 152.33it/s, Train Loss=81.5, Val Loss=78.5, Info=No improvement]
+Epoch 19: 100%|██████████| 281/281 [00:01<00:00, 178.35it/s, Train Loss=81.2, Val Loss=80.6, Info=No improvement]
+Epoch 20: 100%|██████████| 281/281 [00:01<00:00, 187.30it/s, Train Loss=81, Val Loss=80.8, Info=No improvement]
+Epoch 21: 100%|██████████| 281/281 [00:01<00:00, 184.84it/s, Train Loss=80.7, Val Loss=81.5, Info=No improvement]
+Epoch 22: 100%|██████████| 281/281 [00:01<00:00, 188.79it/s, Train Loss=81, Val Loss=79.2, Info=No improvement]
+Epoch 23: 100%|██████████| 281/281 [00:01<00:00, 187.56it/s, Train Loss=79.9, Val Loss=79.3, Info=No improvement]
+Epoch 24: 100%|██████████| 281/281 [00:01<00:00, 189.09it/s, Train Loss=80.3, Val Loss=77, Info=No improvement]
+Epoch 25: 100%|██████████| 281/281 [00:01<00:00, 188.21it/s, Train Loss=80.9, Val Loss=77.4, Info=No improvement]
+For model T1
+
+Inference:
+anna -> Target:11.0 , Prediction:5.1001 , Error:5.8999
+david -> Target:11.0 , Prediction:5.1672 , Error:5.8328
+huck -> Target:11.0 , Prediction:4.8250 , Error:6.1750
+jean -> Target:10.0 , Prediction:4.1910 , Error:5.8090
+homer -> Target:13.0 , Prediction:4.7520 , Error:8.2480
+queen5_5 -> Target:5.0 , Prediction:5.8905 , Error:0.8905
+queen6_6 -> Target:7.0 , Prediction:6.9309 , Error:0.0691
+queen7_7 -> Target:7.0 , Prediction:8.4453 , Error:1.4453
+queen8_12 -> Target:12.0 , Prediction:15.5684 , Error:3.5684
+queen8_8 -> Target:9.0 , Prediction:10.5374 , Error:1.5374
+queen9_9 -> Target:10.0 , Prediction:13.2412 , Error:3.2412
+queen13_13 -> Target:13.0 , Prediction:30.8100 , Error:17.8100
+myciel5 -> Target:6.0 , Prediction:5.3465 , Error:0.6535
+myciel6 -> Target:7.0 , Prediction:7.0164 , Error:0.0164
+myciel7 -> Target:8.0 , Prediction:10.7645 , Error:2.7645
+games120 -> Target:9.0 , Prediction:5.3540 , Error:3.6460
+Total loss for files: 575.7835
+Total MAE score: 67.60701322555542
+All errors: [5.89991093e+00 5.83280373e+00 6.17497540e+00 5.80902004e+00
+ 8.24796486e+00 8.90496254e-01 6.91170692e-02 1.44526482e+00
+ 3.56842899e+00 1.53742504e+00 3.24115086e+00 1.78100243e+01
+ 6.53515339e-01 1.64375305e-02 2.76446819e+00 3.64600992e+00]
+Execution time:0.0887
+Execution time:55.3857
+
+Process finished with exit code 0

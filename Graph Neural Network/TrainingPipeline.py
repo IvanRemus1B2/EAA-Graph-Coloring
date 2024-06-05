@@ -101,9 +101,9 @@ class TrainingPipeline:
             no_epochs = config.no_epochs
             train_batch_size = config.train_batch_size
 
-            model = GNNBasicLayers(self.device, **config.model,
-                                   layer_aggregation=config.layer_aggregation,
-                                   global_layer_aggregation=config.global_layer_aggregation)
+            model = GNNSimpleLayers(self.device, **config.model,
+                                    layer_aggregation=config.layer_aggregation,
+                                    global_layer_aggregation=config.global_layer_aggregation)
 
             no_workers = 2
             pin_memory = (model.device.type == 'cuda')

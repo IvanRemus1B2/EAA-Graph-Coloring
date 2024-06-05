@@ -3,6 +3,8 @@ import time
 import math
 import networkx as nx
 
+import json
+
 from typing import Union
 
 import random
@@ -16,6 +18,7 @@ from torch_geometric.loader import DataLoader
 
 from GCConstraintSatisfaction import find_chromatic_number
 from models import *
+from models import get_model
 from GraphColoring import *
 
 from tqdm import tqdm
@@ -31,6 +34,8 @@ import numpy as np
 from enum import Enum
 
 from models import ModelArchitecture
+
+import os
 
 
 # instances taken from https://mat.tepper.cmu.edu/COLOR/instances.html
@@ -103,31 +108,46 @@ def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
     return graph
 
 
-def read_col_file(folder: str, instance_name: str, extension: str) -> GraphColoringInstance:
+def read_col_file(folder: str, instance_name: str, extension: str, info_file_path: str = None) -> GraphColoringInstance:
     # Search for the chromatic number and source in the info file
     instance_chromatic_number = None
     found = False
+    source = ""
+    description = ""
 
-    info_file_path = folder + "\\" + "Instances Info.txt"
+    if info_file_path is None:
+        info_file_path = folder + "\\" + "Instances Info.txt"
+        with open(info_file_path, 'r') as info_file:
+            for line in info_file.readlines():
+                name, _, chromatic_number, source = line.split(",")
+                name = name.rsplit(".", 1)[0]
+                chromatic_number = int(chromatic_number) if chromatic_number != " ?" else None
+                if name == instance_name:
+                    instance_chromatic_number = chromatic_number
+                    found = True
+                    break
+
+        if not found:
+            raise ValueError(f"The file {instance_name} wasn't found in the Instance Info.txt file")
+    else:
+        # Given,we assume the format is 'name chromatic number character'
+        with open(info_file_path, 'r') as info_file:
+            for line in info_file.readlines():
+                name, chromatic_number, _ = line.split(" ")
+                chromatic_number = int(chromatic_number) if chromatic_number != " ?" else None
+                if name == instance_name:
+                    instance_chromatic_number = chromatic_number
+                    found = True
+                    break
+
+        if not found:
+            raise ValueError(f"The file {instance_name} wasn't found at {info_file_path}")
+
     file_path = folder + "\\" + instance_name + extension
-    with open(info_file_path, 'r') as info_file:
-        for line in info_file.readlines():
-            name, _, chromatic_number, source = line.split(",")
-            name = name.rsplit(".", 1)[0]
-            chromatic_number = int(chromatic_number) if chromatic_number != " ?" else None
-            if name == instance_name:
-                instance_chromatic_number = chromatic_number
-                found = True
-                break
-
-    if not found:
-        raise ValueError(f"The file {instance_name} wasn't found in the Instance Info.txt file")
-
     with open(file_path, 'r') as file:
         lines = file.readlines()
         no_vertices = None
         no_edges = None
-        description = ""
         edges = []
         for line in lines:
             if line.startswith('p'):
@@ -147,10 +167,11 @@ def read_col_file(folder: str, instance_name: str, extension: str) -> GraphColor
                                  description, source)
 
 
-def read_instances(instance_names: list[str], instance_folder: str, extension: str) -> list[GraphColoringInstance]:
+def read_instances(instance_names: list[str], instance_folder: str, extension: str, info_file_path: str = None) -> list[
+    GraphColoringInstance]:
     instances = []
     for instance_name in instance_names:
-        coloring_instance = read_col_file(instance_folder, instance_name, extension)
+        coloring_instance = read_col_file(instance_folder, instance_name, extension, info_file_path)
         instances.append(coloring_instance)
         # instances.append(coloring_instance.convert_to_data())
     return instances
@@ -325,7 +346,7 @@ def test(model, criterion, loader):
 def test_model(no_epochs: int, train_batch_size: int,
                instances: Union[list[Data], None],
                train_percent: float,
-               val_extra_instances: list[Data],
+               val_extra_dataset: list[Data], extra_val_loss_percentage: float,
                model, criterion, optimizer,
                model_path: str):
     train_dataset, val_dataset = split_instances(instances, train_percent)
@@ -336,29 +357,56 @@ def test_model(no_epochs: int, train_batch_size: int,
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True,
                               pin_memory=pin_memory, num_workers=no_workers, persistent_workers=persistent_workers,
                               drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+    no_val_instances = len(val_dataset)
+    no_extra_val_instances = len(val_extra_dataset)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    extra_val_loader = DataLoader(val_extra_dataset, batch_size=16, shuffle=False)
+
+    all_train_loss = []
+    all_val_loss = []
+    all_extra_val_loss = []
+
     best_val_loss = math.inf
     for epoch in range(1, no_epochs + 1):
         pbar = tqdm(total=len(train_loader), desc=f"Epoch {epoch}", dynamic_ncols=True)
 
         train_loss = train(model, criterion, optimizer, train_loader, pbar)
-
         val_loss = test(model, criterion, val_loader)
+        extra_val_loss = test(model, criterion, extra_val_loader)
 
-        if best_val_loss > val_loss:
+        total_val_loss = (1 - extra_val_loss_percentage) * val_loss + \
+                         extra_val_loss_percentage * extra_val_loss
+        # val_loss = test(model, criterion, val_loader) / no_val_instances + \
+        #            test(model, criterion, extra_val_loader) / no_extra_val_instances
+
+        if best_val_loss > total_val_loss:
             pbar.set_postfix({'Train Loss': train_loss,
-                              'Val Loss': val_loss,
-                              'Info': f"Improved from {best_val_loss:.4f} to {val_loss:.4f}"
+                              'Val Loss': total_val_loss,
+                              'Info': f"Improved from {best_val_loss:.4f} to {total_val_loss:.4f}"
                               })
-            best_val_loss = val_loss
+            best_val_loss = total_val_loss
             save_model(model, model_path)
         else:
             pbar.set_postfix({'Train Loss': train_loss,
-                              'Val Loss': val_loss,
-                              'Info': f"No improvement"
+                              'Val Loss': total_val_loss,
+                              'Info': "No improvement"
                               })
 
         pbar.close()
+
+        all_train_loss.append(train_loss)
+        all_val_loss.append(val_loss)
+        all_extra_val_loss.append(extra_val_loss)
+
+    model_info = {
+        'train_loss': all_train_loss,
+        'val_loss': all_val_loss,
+        'extra_val_loss': all_extra_val_loss,
+        'extra_val_loss_percentage': extra_val_loss_percentage
+    }
+
+    with open(model_path + "-Info.txt", 'w') as file:
+        file.write(json.dumps(model_info))
 
 
 def inference_on(model, criterion,
@@ -588,63 +636,101 @@ def load_model(model_path: str):
     return model
 
 
+def get_file_names(chromatic_number_range: tuple[int, int],
+                   excluded_instances: list[str]) -> list[str]:
+    names = []
+    instance_folder = "Additional Instances/reduced_gcp"
+    with open("Additional Instances/best_scores_gcp.txt") as file:
+        for line in file.readlines():
+            values = line.split(" ")
+            values[-1] = values[-1][:-1]
+
+            instance_name = values[0]
+            chromatic_number = int(values[1])
+            is_optimal = (values[2] == '*')
+            if is_optimal and (not (instance_name in excluded_instances)) and chromatic_number_range[
+                0] <= chromatic_number <= chromatic_number_range[
+                1] and os.path.isfile(
+                instance_folder + "/" + instance_name + ".col"):
+                names.append(instance_name)
+
+    return names
+
+
+def get_val_extra_instances(chromatic_number_range: tuple[int, int], excluded_instances: list[str]):
+    val_instance_names = get_file_names(chromatic_number_range, excluded_instances)
+
+    instance_folder = "Additional Instances/reduced_gcp"
+    info_file_path = "Additional Instances/best_scores_gcp.txt"
+    extension = ".col"
+
+    return read_instances(val_instance_names, instance_folder, extension, info_file_path)
+
+
 def create_and_train_model():
     instance_folder = "Instances"
     dataset_folder = "Datasets"
     models_folder = "Models"
 
-    instances_names = []
-    instances_names += ["anna", "david", "huck", "jean", "homer"]
+    test_instances_names = []
+    test_instances_names += ["anna", "david", "huck", "jean", "homer"]
     # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
     # instances_names += ["games120", "miles250"]
-    instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
-    instances_names += ["myciel5", "myciel6", "myciel7"]
-    instances_names += ["games120"]
+    test_instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
+    test_instances_names += ["myciel5", "myciel6", "myciel7"]
+    test_instances_names += ["games120"]
     extension = ".col"
 
     start_time = time.time()
     # device = torch.device('cpu')
     device = get_default_device()
 
-    no_epochs = 10
+    no_epochs = 100
     train_batch_size = 32
     train_percent = 0.9
-
-    val_instances_name = []
 
     # dataset_name = "RE B 100k with 3-6 CN"
     # dataset_name = "RG1 C-100 LCN-6"
     dataset_name = "RG1 10k N 30-60 E 7,5-20"
     # dataset_name = "RG2 100k N 20-60 E 7,5-20"
 
-    model_name = "T3"
-    model_architecture = ModelArchitecture.BasicLayers
+    # Used for validation extra dataset
+    chromatic_number_range = (3, 15)
+    extra_val_loss_percentage = 1
+
+    model_name = "10k M1"
+    model_architecture = ModelArchitecture.GraphConvLayers
+    model_architecture_str = str(model_architecture).split(".")[1]
+    model_path = (
+                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
 
     hyper_parameters = {
-        'no_units_per_gc_layer': [128, 64, 128, 256],
+        'no_units_per_gc_layer': [128, 128, 128],
         'no_node_features': 128,
 
-        'no_units_per_dense_layer': [128, 64],
+        'no_units_per_dense_layer': [],
 
         'layer_aggregation': "add",
         'global_layer_aggregation': "mean",
+        'gc_layer_dropout': 0.5
     }
     # linear_layer_dropout = 0.25
     # conv_layer_dropout = 0.1
 
     learning_rate = 1e-3
 
+    criterion = torch.nn.L1Loss()
+    # criterion = torch.nn.MSELoss()
+
     # -----------------
 
     print(f"For device: {device}")
     print(f"Dataset name:{dataset_name}")
-    model_architecture_str = str(model_architecture).split(".")[1]
+
     print(f"no epochs:{no_epochs},batch_size:{train_batch_size},train_percentage:{train_percent}")
 
-    model = GNNBasicLayers(device, no_units_per_gc_layer=hyper_parameters['no_units_per_gc_layer'],
-                           no_units_per_dense_layer=hyper_parameters['no_units_per_dense_layer'],
-                           layer_aggregation=hyper_parameters['layer_aggregation'],
-                           global_layer_aggregation=hyper_parameters['global_layer_aggregation'])
+    model = get_model(model_architecture, device, hyper_parameters)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
@@ -654,16 +740,10 @@ def create_and_train_model():
     # print(f"linear_layer_dropout:{linear_layer_dropout},conv_layer_dropout:{conv_layer_dropout}")
     print(f"No Params:{params}")
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = torch.nn.MSELoss()
-
     dataset = load_instances(dataset_folder, dataset_name)
     print_dataset_distribution(dataset, dataset_name)
 
-    model_path = (
-                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
-
-    val_extra_instances = read_instances(val_instances_name, instance_folder, extension)
+    val_extra_instances = get_val_extra_instances(chromatic_number_range, test_instances_names)
     extra_val_dataset = [instance.convert_to_data(hyper_parameters['no_node_features']) for instance in
                          val_extra_instances]
     del val_extra_instances
@@ -672,21 +752,21 @@ def create_and_train_model():
     del dataset
 
     test_model(no_epochs, train_batch_size,
-               dataset_instances, train_percent, extra_val_dataset,
+               dataset_instances, train_percent,
+               extra_val_dataset, extra_val_loss_percentage,
                model, criterion, optimizer, model_path)
 
-    test_model_from(instance_folder, instances_names, models_folder, model_architecture_str, model_name, extension)
+    test_model_from(instance_folder, test_instances_names, extension, model_name, model_path)
 
     print(f"Execution time:{time.time() - start_time:.4f}")
 
 
-def test_model_from(instances_folder: str, instances_names: list[str],
-                    models_folder: str, model_architecture_str: str, model_name: str,
-                    extension: str = ".col"):
+def test_model_from(instances_folder: str, instances_names: list[str], extension: str,
+                    model_name: str, model_path: str,
+                    ):
+    print(f"For model {model_name}")
     start_time = time.time()
 
-    model_path = (
-                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
     model = load_model(model_path)
 
     criterion = torch.nn.MSELoss()
