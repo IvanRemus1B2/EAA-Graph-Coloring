@@ -1,6 +1,6 @@
 from ortools.sat.python import cp_model
 import time
-
+import math
 import networkx as nx
 
 from typing import Union
@@ -17,6 +17,8 @@ from torch_geometric.loader import DataLoader
 from GCConstraintSatisfaction import find_chromatic_number
 from models import *
 from GraphColoring import *
+
+from tqdm import tqdm
 
 import pickle
 
@@ -281,7 +283,7 @@ def split_instances(data_list, train_percent: float):
     return train_instances, val_instances
 
 
-def train(model, criterion, optimizer, train_loader, ):
+def train(model, criterion, optimizer, train_loader, pbar):
     model.train()
 
     total_loss = 0.0
@@ -293,6 +295,10 @@ def train(model, criterion, optimizer, train_loader, ):
 
         loss = criterion(prediction, target)  # Compute the loss.
         total_loss += loss.item()
+
+        pbar.set_postfix({'Train Loss': total_loss})
+        pbar.update()
+
         loss.backward()  # Derive gradients.
         optimizer.step()  # Update parameters based on gradients.
         optimizer.zero_grad(set_to_none=True)  # Clear gradients.
@@ -319,9 +325,10 @@ def test(model, criterion, loader):
 def test_model(no_epochs: int, train_batch_size: int,
                instances: Union[list[Data], None],
                train_percent: float,
-               model, criterion, optimizer):
+               val_extra_instances: list[Data],
+               model, criterion, optimizer,
+               model_path: str):
     train_dataset, val_dataset = split_instances(instances, train_percent)
-    no_train_instances, no_val_instances = len(train_dataset), len(val_dataset)
 
     no_workers = 1
     pin_memory = (model.device.type == 'cuda')
@@ -330,11 +337,28 @@ def test_model(no_epochs: int, train_batch_size: int,
                               pin_memory=pin_memory, num_workers=no_workers, persistent_workers=persistent_workers,
                               drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
-
+    best_val_loss = math.inf
     for epoch in range(1, no_epochs + 1):
-        train_loss = train(model, criterion, optimizer, train_loader)
+        pbar = tqdm(total=len(train_loader), desc=f"Epoch {epoch}", dynamic_ncols=True)
+
+        train_loss = train(model, criterion, optimizer, train_loader, pbar)
+
         val_loss = test(model, criterion, val_loader)
-        print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
+
+        if best_val_loss > val_loss:
+            pbar.set_postfix({'Train Loss': train_loss,
+                              'Val Loss': val_loss,
+                              'Info': f"Improved from {best_val_loss:.4f} to {val_loss:.4f}"
+                              })
+            best_val_loss = val_loss
+            save_model(model, model_path)
+        else:
+            pbar.set_postfix({'Train Loss': train_loss,
+                              'Val Loss': val_loss,
+                              'Info': f"No improvement"
+                              })
+
+        pbar.close()
 
 
 def inference_on(model, criterion,
@@ -564,7 +588,7 @@ def load_model(model_path: str):
     return model
 
 
-def create_train_model():
+def create_and_train_model():
     instance_folder = "Instances"
     dataset_folder = "Datasets"
     models_folder = "Models"
@@ -582,22 +606,25 @@ def create_train_model():
     # device = torch.device('cpu')
     device = get_default_device()
 
-    no_epochs = 25
-    train_batch_size = 64
+    no_epochs = 10
+    train_batch_size = 32
     train_percent = 0.9
+
+    val_instances_name = []
 
     # dataset_name = "RE B 100k with 3-6 CN"
     # dataset_name = "RG1 C-100 LCN-6"
-    dataset_name = "RG2 100k N 20-60 E 7,5-20"
+    dataset_name = "RG1 10k N 30-60 E 7,5-20"
+    # dataset_name = "RG2 100k N 20-60 E 7,5-20"
 
-    model_name = "RG2 2"
+    model_name = "T3"
     model_architecture = ModelArchitecture.BasicLayers
 
     hyper_parameters = {
-        'no_units_per_gc_layer': [128, 128, 128],
+        'no_units_per_gc_layer': [128, 64, 128, 256],
         'no_node_features': 128,
 
-        'no_units_per_dense_layer': [64],
+        'no_units_per_dense_layer': [128, 64],
 
         'layer_aggregation': "add",
         'global_layer_aggregation': "mean",
@@ -633,17 +660,20 @@ def create_train_model():
     dataset = load_instances(dataset_folder, dataset_name)
     print_dataset_distribution(dataset, dataset_name)
 
+    model_path = (
+                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
+
+    val_extra_instances = read_instances(val_instances_name, instance_folder, extension)
+    extra_val_dataset = [instance.convert_to_data(hyper_parameters['no_node_features']) for instance in
+                         val_extra_instances]
+    del val_extra_instances
+
     dataset_instances = [instance.convert_to_data(hyper_parameters['no_node_features']) for instance in dataset]
     del dataset
 
     test_model(no_epochs, train_batch_size,
-               dataset_instances, train_percent,
-               model, criterion, optimizer)
-
-    model_path = (
-                     "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
-
-    save_model(model, model_path)
+               dataset_instances, train_percent, extra_val_dataset,
+               model, criterion, optimizer, model_path)
 
     test_model_from(instance_folder, instances_names, models_folder, model_architecture_str, model_name, extension)
 
@@ -667,5 +697,5 @@ def test_model_from(instances_folder: str, instances_names: list[str],
 
 
 if __name__ == '__main__':
-    create_train_model()
+    create_and_train_model()
     # main()
