@@ -9,6 +9,16 @@ from main import load_model, test, load_instances, print_dataset_distribution, r
 import torch
 
 
+def read_val_loss(file_name: str):
+    val_loss = []
+    with open(file_name + ".txt") as file:
+        for line in file.readlines():
+            if "Epoch " in line:
+                val_loss.append(float(line.split(",")[3].split("=")[1]))
+
+    return np.array(val_loss)
+
+
 def get_loss_on(model, criterion,
                 instance_folder: str, instance_names: list[str], extension: str):
     model.eval()
@@ -104,15 +114,13 @@ def get_plot_best_models():
         for model_architecture in model_architectures:
             model_architecture_str = str(model_architecture).split(".")[1]
             model_path = "Models/" + model_architecture_str + "-" + dataset_name + "-F1-" + global_layer_aggregation
-            model_path_info = "Models/" + model_architecture_str + "-" + dataset_name + "-F1-" + global_layer_aggregation + "-Info.txt"
+            model_path_info = "Models/" + model_architecture_str + "-" + dataset_name + "-F1-" + global_layer_aggregation
             model = load_model(model_path)
 
             test_loss, _ = get_loss_on(model, criterion, "Instances", test_instances_names, ".col")
             if best_loss > test_loss:
                 best_loss = test_loss
-                with open(model_path_info) as file:
-                    model_info = json.loads(file.read())
-                best_val_loss = model_info['val_loss']
+                best_val_loss = read_val_loss(model_path_info)
                 best_name = model_architecture_str
 
         plt.plot(x_values, best_val_loss, label=dataset_name + "-" + best_name)
@@ -154,10 +162,9 @@ def create_all_datasets_plots():
             plt.title(f"Val Loss over Epochs for {dataset_name}(with {global_layer_aggregation})")
             for model_architecture in model_architectures:
                 model_architecture_str = str(model_architecture).split(".")[1]
-                model_info_path = "Models/" + model_architecture_str + "-" + dataset_name + "-F1-" + global_layer_aggregation + "-Info.txt"
-                with open(model_info_path) as file:
-                    model_info = json.loads(file.read())
-                plt.plot(x_values, model_info['val_loss'], label=model_architecture_str)
+                model_info_path = "Models/" + model_architecture_str + "-" + dataset_name + "-F1-" + global_layer_aggregation
+
+                plt.plot(x_values, read_val_loss(model_info_path), label=model_architecture_str)
             plt.legend()
 
             plt.savefig(f"Plots/{dataset_name}-Val Loss.png")
@@ -251,10 +258,12 @@ def create_table_code(dataset_names: list[str]):
 
 
 if __name__ == '__main__':
+    # print(read_val_loss("SAGEConv_LSTM-D5-F1-mean"))
     # create_all_datasets_plots()
     # create_table_code(["D1", "D2", "D3", "D4"])
     # create_table_code(["D5"])
 
-    get_dataset_histograms()
+    # get_dataset_histograms()
 
     # create_all_datasets_plots()
+    get_plot_best_models()

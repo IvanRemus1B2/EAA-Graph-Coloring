@@ -1,0 +1,86 @@
+---------> For model D4-F1-mean:
+For device: cuda
+Dataset name:D4 10k N30-60
+no epochs:50,batch_size:32,train_percentage:0.9
+Name:D4-F1-mean
+type:SAGEConv_LSTM
+Hyper parameters:{'no_units_per_gc_layer': [96, 96, 96], 'no_node_features': 96, 'no_units_per_dense_layer': [], 'layer_aggregation': 'add', 'global_layer_aggregation': 'mean', 'gc_layer_dropout': 0.5}
+No Params:186529
+For D4 10k N30-60
+{5: 3084, 3: 3084, 4: 3084, 2: 740, 6: 8}
+Epoch 1: 100%|██████████| 312/312 [01:03<00:00,  4.94it/s, Train Loss=205, Val Loss=19, Info=Improved from inf to 19.0062]
+Epoch 2: 100%|██████████| 312/312 [00:08<00:00, 38.78it/s, Train Loss=103, Val Loss=18.4, Info=Improved from 19.0062 to 18.4419]
+Epoch 3: 100%|██████████| 312/312 [00:08<00:00, 38.24it/s, Train Loss=99.4, Val Loss=18.4, Info=Improved from 18.4419 to 18.4142]
+Epoch 4: 100%|██████████| 312/312 [00:08<00:00, 37.54it/s, Train Loss=99.9, Val Loss=20.9, Info=No improvement]
+Epoch 5: 100%|██████████| 312/312 [00:07<00:00, 39.12it/s, Train Loss=101, Val Loss=20.7, Info=No improvement]
+Epoch 6: 100%|██████████| 312/312 [00:08<00:00, 38.17it/s, Train Loss=100, Val Loss=20.7, Info=No improvement]
+Epoch 7: 100%|██████████| 312/312 [00:08<00:00, 38.63it/s, Train Loss=98.3, Val Loss=21.8, Info=No improvement]
+Epoch 8: 100%|██████████| 312/312 [00:08<00:00, 38.78it/s, Train Loss=98.9, Val Loss=19.3, Info=No improvement]
+Epoch 9: 100%|██████████| 312/312 [00:08<00:00, 37.66it/s, Train Loss=98.4, Val Loss=19.4, Info=No improvement]
+Epoch 10: 100%|██████████| 312/312 [00:08<00:00, 36.03it/s, Train Loss=95.1, Val Loss=19.9, Info=No improvement]
+Epoch 11: 100%|██████████| 312/312 [00:08<00:00, 34.84it/s, Train Loss=94.5, Val Loss=21.5, Info=No improvement]
+Epoch 12: 100%|██████████| 312/312 [00:09<00:00, 34.59it/s, Train Loss=94.5, Val Loss=19.4, Info=No improvement]
+Epoch 13: 100%|██████████| 312/312 [00:10<00:00, 28.59it/s, Train Loss=96.6, Val Loss=20.6, Info=No improvement]
+Epoch 14: 100%|██████████| 312/312 [00:10<00:00, 28.44it/s, Train Loss=97.4, Val Loss=18.9, Info=No improvement]
+Epoch 15: 100%|██████████| 312/312 [00:10<00:00, 29.73it/s, Train Loss=97.5, Val Loss=21.2, Info=No improvement]
+Epoch 16: 100%|██████████| 312/312 [00:10<00:00, 29.04it/s, Train Loss=95.4, Val Loss=19.6, Info=No improvement]
+Epoch 17: 100%|██████████| 312/312 [00:10<00:00, 29.13it/s, Train Loss=96.9, Val Loss=19.6, Info=No improvement]
+Epoch 18: 100%|██████████| 312/312 [00:10<00:00, 29.50it/s, Train Loss=95.8, Val Loss=19.7, Info=No improvement]
+Epoch 19: 100%|██████████| 312/312 [00:10<00:00, 29.16it/s, Train Loss=95.3, Val Loss=21.3, Info=No improvement]
+Epoch 20: 100%|██████████| 312/312 [00:10<00:00, 29.21it/s, Train Loss=93.9, Val Loss=19.4, Info=No improvement]
+Epoch 21: 100%|██████████| 312/312 [00:10<00:00, 29.09it/s, Train Loss=97.1, Val Loss=21.7, Info=No improvement]
+Epoch 22: 100%|██████████| 312/312 [00:10<00:00, 28.77it/s, Train Loss=98.2, Val Loss=21.6, Info=No improvement]
+Epoch 23: 100%|██████████| 312/312 [00:10<00:00, 29.68it/s, Train Loss=97.2, Val Loss=21.2, Info=No improvement]
+Epoch 24: 100%|██████████| 312/312 [00:11<00:00, 27.07it/s, Train Loss=94.6, Val Loss=20.4, Info=No improvement]
+Epoch 25: 100%|██████████| 312/312 [00:10<00:00, 30.68it/s, Train Loss=95.7, Val Loss=20.2, Info=No improvement]
+Epoch 26: 100%|██████████| 312/312 [00:10<00:00, 28.79it/s, Train Loss=95.2, Val Loss=20.3, Info=No improvement]
+Epoch 27: 100%|██████████| 312/312 [00:11<00:00, 27.56it/s, Train Loss=95.6, Val Loss=20.7, Info=No improvement]
+Epoch 28: 100%|██████████| 312/312 [00:10<00:00, 29.41it/s, Train Loss=93.7, Val Loss=20.7, Info=No improvement]
+Epoch 29: 100%|██████████| 312/312 [00:11<00:00, 26.15it/s, Train Loss=94, Val Loss=20, Info=No improvement]
+Epoch 30: 100%|██████████| 312/312 [00:11<00:00, 26.86it/s, Train Loss=93.5, Val Loss=20.4, Info=No improvement]
+Epoch 31: 100%|██████████| 312/312 [00:11<00:00, 27.23it/s, Train Loss=93, Val Loss=20.1, Info=No improvement]
+Epoch 32: 100%|██████████| 312/312 [00:11<00:00, 27.54it/s, Train Loss=93.3, Val Loss=20.5, Info=No improvement]
+Epoch 33: 100%|██████████| 312/312 [00:12<00:00, 25.47it/s, Train Loss=93.3, Val Loss=19.4, Info=No improvement]
+Epoch 34: 100%|██████████| 312/312 [00:10<00:00, 29.07it/s, Train Loss=93.5, Val Loss=19.9, Info=No improvement]
+Epoch 35: 100%|██████████| 312/312 [00:12<00:00, 24.67it/s, Train Loss=93, Val Loss=20.8, Info=No improvement]
+Epoch 36: 100%|██████████| 312/312 [00:12<00:00, 25.30it/s, Train Loss=92.5, Val Loss=19.8, Info=No improvement]
+Epoch 37: 100%|██████████| 312/312 [00:13<00:00, 23.77it/s, Train Loss=92.4, Val Loss=20.5, Info=No improvement]
+Epoch 38: 100%|██████████| 312/312 [00:13<00:00, 23.99it/s, Train Loss=92, Val Loss=20.2, Info=No improvement]
+Epoch 39: 100%|██████████| 312/312 [00:12<00:00, 24.06it/s, Train Loss=92.4, Val Loss=19.3, Info=No improvement]
+Epoch 40: 100%|██████████| 312/312 [00:12<00:00, 24.70it/s, Train Loss=90.8, Val Loss=20.6, Info=No improvement]
+Epoch 41: 100%|██████████| 312/312 [00:12<00:00, 24.48it/s, Train Loss=93, Val Loss=20.2, Info=No improvement]
+Epoch 42: 100%|██████████| 312/312 [00:12<00:00, 24.87it/s, Train Loss=92.3, Val Loss=20, Info=No improvement]
+Epoch 43: 100%|██████████| 312/312 [00:11<00:00, 26.46it/s, Train Loss=92.3, Val Loss=20, Info=No improvement]
+Epoch 44: 100%|██████████| 312/312 [00:11<00:00, 26.94it/s, Train Loss=91.8, Val Loss=20.7, Info=No improvement]
+Epoch 45: 100%|██████████| 312/312 [00:11<00:00, 26.71it/s, Train Loss=91.9, Val Loss=20.4, Info=No improvement]
+Epoch 46: 100%|██████████| 312/312 [00:11<00:00, 26.38it/s, Train Loss=90.6, Val Loss=20.3, Info=No improvement]
+Epoch 47: 100%|██████████| 312/312 [00:11<00:00, 26.96it/s, Train Loss=92, Val Loss=20.2, Info=No improvement]
+Epoch 48: 100%|██████████| 312/312 [00:11<00:00, 26.90it/s, Train Loss=91.1, Val Loss=19.6, Info=No improvement]
+Epoch 49: 100%|██████████| 312/312 [00:11<00:00, 27.39it/s, Train Loss=91.4, Val Loss=19.7, Info=No improvement]
+Epoch 50: 100%|██████████| 312/312 [00:11<00:00, 27.58it/s, Train Loss=91.8, Val Loss=19.6, Info=No improvement]
+For model D4-F1-mean
+
+Inference:
+anna -> Target:11.0 , Prediction:3.0420 , Error:7.9580
+david -> Target:11.0 , Prediction:2.3041 , Error:8.6959
+huck -> Target:11.0 , Prediction:3.4892 , Error:7.5108
+jean -> Target:10.0 , Prediction:3.5624 , Error:6.4376
+homer -> Target:13.0 , Prediction:2.1547 , Error:10.8453
+queen5_5 -> Target:5.0 , Prediction:6.5749 , Error:1.5749
+queen6_6 -> Target:7.0 , Prediction:6.6464 , Error:0.3536
+queen7_7 -> Target:7.0 , Prediction:6.6606 , Error:0.3394
+queen8_12 -> Target:12.0 , Prediction:6.6023 , Error:5.3977
+queen8_8 -> Target:9.0 , Prediction:6.6341 , Error:2.3659
+queen9_9 -> Target:10.0 , Prediction:6.5844 , Error:3.4156
+queen13_13 -> Target:13.0 , Prediction:6.2974 , Error:6.7026
+myciel5 -> Target:6.0 , Prediction:4.7944 , Error:1.2056
+myciel6 -> Target:7.0 , Prediction:4.6339 , Error:2.3661
+myciel7 -> Target:8.0 , Prediction:2.6256 , Error:5.3744
+games120 -> Target:9.0 , Prediction:6.0860 , Error:2.9140
+Total loss for files: 492.8959
+Total MAE score: 73.45740222930908
+All errors: [ 7.9580431   8.69587612  7.51076317  6.43756771 10.8453083   1.57491207
+  0.35355616  0.33936596  5.39774227  2.36589575  3.41563606  6.70262623
+  1.20560837  2.36613798  5.37435627  2.91400671]
+Execution time:0.3361
+Execution time:597.4318
