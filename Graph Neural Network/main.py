@@ -679,6 +679,126 @@ def get_val_extra_instances(chromatic_number_range: tuple[int, int], excluded_in
     return read_instances(val_instance_names, instance_folder, extension, info_file_path)
 
 
+def train_models():
+    model_architectures = [ModelArchitecture.GraphConv_LSTM, ModelArchitecture.SAGEConv_LSTM]
+    # model_architectures = [ModelArchitecture.GraphConv, ModelArchitecture.SAGEConv]
+    dataset_names = ["D1 10k N 30-60 E 7,5-20", "D2 10k N 30-60 3-6C", "D3 10k N 30-60 Clique", "D4 10k N30-60",
+                     "D5 Hard"]
+
+    hyper_parameters = {
+        'no_units_per_gc_layer': [128, 128, 128],
+        'no_node_features': 128,
+
+        'no_units_per_dense_layer': [],
+
+        'layer_aggregation': "add",
+        'global_layer_aggregation': "mean",
+        'gc_layer_dropout': 0.5
+    }
+
+    instance_folder = "Instances"
+    dataset_folder = "Datasets"
+    models_folder = "Models"
+
+    test_instances_names = []
+    test_instances_names += ["anna", "david", "huck", "jean", "homer"]
+    # instances_names += ["zeroin.i.1", "zeroin.i.2", "zeroin.i.3"]
+    # instances_names += ["games120", "miles250"]
+    test_instances_names += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9",
+                             "queen13_13"]
+    test_instances_names += ["myciel5", "myciel6", "myciel7"]
+    test_instances_names += ["games120"]
+    extension = ".col"
+
+    no_epochs = 50
+
+    for model_architecture in model_architectures:
+        for dataset_name in dataset_names:
+            model_name = dataset_name.split(" ")[0] + "-F1-" + hyper_parameters['global_layer_aggregation']
+
+            start_time = time.time()
+            # device = torch.device('cpu')
+            device = get_default_device()
+
+            train_batch_size = 32
+            train_percent = 0.9
+            use_default_val_dataset = False
+
+            # dataset_name = "RE B 100k with 3-6 CN"
+            # dataset_name = "RG1 C-100 LCN-6"
+
+            # dataset_name = "D1 10k N 30-60 E 7,5-20"
+            # dataset_name = "D2 10k N 30-60 3-6C"
+            # dataset_name="D3 10k N 30-60"
+            # dataset_name="D4 10k N30-60"
+            # dataset_name = "D5 Hard"
+
+            # dataset_name = "RG2 100k N 20-60 E 7,5-20"
+
+            # Used for validation extra dataset
+            chromatic_number_range = (3, 15)
+            extra_val_loss_percentage = 1
+
+            model_architecture_str = str(model_architecture).split(".")[1]
+            model_path = (
+                             "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
+
+            # hyper_parameters = {
+            #     'no_units_per_gc_layer': [96, 96, 96],
+            #     'no_node_features': 96,
+            #
+            #     'no_units_per_dense_layer': [],
+            #
+            #     'global_layer_aggregation': "mean",
+            #     'gc_layer_dropout': 0.5
+            # }
+
+            learning_rate = 1e-3
+            weight_decay = 5e-4
+
+            criterion = torch.nn.L1Loss()
+            # criterion = torch.nn.MSELoss()
+
+            # -----------------
+            print(f"---------> For model {model_name}:")
+            print(f"For device: {device}")
+            print(f"Dataset name:{dataset_name}")
+
+            print(f"no epochs:{no_epochs},batch_size:{train_batch_size},train_percentage:{train_percent}")
+
+            model = get_model(model_architecture, device, hyper_parameters)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+
+            model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+            params = sum([np.prod(p.size()) for p in model_parameters])
+            print(f"Name:{model_name}")
+            print(f"type:{model_architecture_str}")
+            print(f"Hyper parameters:{hyper_parameters}")
+            # print(f"linear_layer_dropout:{linear_layer_dropout},conv_layer_dropout:{conv_layer_dropout}")
+            print(f"No Params:{params}")
+
+            dataset = load_instances(dataset_folder, dataset_name)
+            print_dataset_distribution(dataset, dataset_name)
+
+            val_extra_instances = get_val_extra_instances(chromatic_number_range, test_instances_names)
+            extra_val_dataset = [instance.convert_to_data(hyper_parameters['no_node_features']) for instance in
+                                 val_extra_instances]
+            del val_extra_instances
+
+            dataset_instances = [instance.convert_to_data(hyper_parameters['no_node_features']) for instance in dataset]
+            del dataset
+
+            test_model(no_epochs, train_batch_size,
+                       dataset_instances, train_percent, use_default_val_dataset,
+                       extra_val_dataset, extra_val_loss_percentage,
+                       model_architecture,
+                       model, criterion, optimizer, model_path)
+
+            test_model_from(instance_folder, test_instances_names, extension, model_name, model_path)
+
+            print(f"Execution time:{time.time() - start_time:.4f}")
+
+
 def create_and_train_model():
     instance_folder = "Instances"
     dataset_folder = "Datasets"
@@ -697,7 +817,7 @@ def create_and_train_model():
     # device = torch.device('cpu')
     device = get_default_device()
 
-    no_epochs = 25
+    no_epochs = 50
     train_batch_size = 32
     train_percent = 0.9
     use_default_val_dataset = False
@@ -705,8 +825,8 @@ def create_and_train_model():
     # dataset_name = "RE B 100k with 3-6 CN"
     # dataset_name = "RG1 C-100 LCN-6"
 
-    dataset_name = "D1 10k N 30-60 E 7,5-20"
-    # dataset_name = "D2 10k N 30-60 3-6C"
+    # dataset_name = "D1 10k N 30-60 E 7,5-20"
+    dataset_name = "D2 10k N 30-60 3-6C"
     # dataset_name="D3 10k N 30-60"
     # dataset_name="D4 10k N30-60"
     # dataset_name = "D5 Hard"
@@ -717,30 +837,31 @@ def create_and_train_model():
     chromatic_number_range = (3, 15)
     extra_val_loss_percentage = 1
 
-    model_name = "D1 1"
+    model_name = "D2 1"
     model_architecture = ModelArchitecture.SAGEConv
     model_architecture_str = str(model_architecture).split(".")[1]
     model_path = (
                      "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
 
     hyper_parameters = {
-        'no_units_per_gc_layer': [96, 96, 96],
-        'no_node_features': 96,
+        'no_units_per_gc_layer': [224, 192, 160],
+        'no_node_features': 224,
 
         'no_units_per_dense_layer': [],
 
         'layer_aggregation': "add",
         'global_layer_aggregation': "mean",
-        'gc_layer_dropout': 0.25
+        'gc_layer_dropout': 0.5
     }
     # hyper_parameters = {
-    #     'no_node_features': 128,
-    #     'layer_aggregation': 'add',
-    #     'final_layer_aggregation': 'mean',
-    #     'layers_dropout': 0.5
+    #     'no_units_per_gc_layer': [96, 96, 96],
+    #     'no_node_features': 96,
+    #
+    #     'no_units_per_dense_layer': [],
+    #
+    #     'global_layer_aggregation': "mean",
+    #     'gc_layer_dropout': 0.5
     # }
-    # linear_layer_dropout = 0.25
-    # conv_layer_dropout = 0.1
 
     learning_rate = 1e-3
     weight_decay = 5e-4
@@ -804,5 +925,6 @@ def test_model_from(instances_folder: str, instances_names: list[str], extension
 
 
 if __name__ == '__main__':
-    create_and_train_model()
+    train_models()
+    # create_and_train_model()
     # main()
