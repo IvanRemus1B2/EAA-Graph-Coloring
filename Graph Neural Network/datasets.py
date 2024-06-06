@@ -417,42 +417,6 @@ def create_dataset_with_least_chromatic_number(no_instances: int,
     return instances
 
 
-def split_instances(data_list, train_percent: float):
-    label_positions = dict()
-    all_labels = []
-    no_instances = len(data_list)
-    for index in range(no_instances):
-        label = int(data_list[index].y.item())
-        if label in label_positions:
-            label_positions[label].append(index)
-        else:
-            label_positions[label] = [index]
-            all_labels.append(label)
-
-    for label in all_labels:
-        random.shuffle(label_positions[label])
-
-    train_instances = []
-    val_instances = []
-
-    found = True
-    position = 0
-    add_train_left = int(train_percent * no_instances)
-    while found:
-        found = False
-        for _, positions in label_positions.items():
-            if position < len(positions):
-                found = True
-                if add_train_left > 0:
-                    train_instances.append(data_list[positions[position]])
-                    add_train_left -= 1
-                else:
-                    val_instances.append(data_list[positions[position]])
-        position += 1
-
-    return train_instances, val_instances
-
-
 def main1():
     start_time = time.time()
 
@@ -583,7 +547,61 @@ def create_val_dataset():
 
     val_dataset = read_instances(val_instance_names, instance_folder, extension, info_file_path)
 
+    return val_dataset
+
+
+def split_instances(data_list, no_instances_take: int):
+    label_positions = dict()
+    all_labels = []
+    no_instances = len(data_list)
+    for index in range(no_instances):
+        label = int(data_list[index].chromatic_number)
+        if label in label_positions:
+            label_positions[label].append(index)
+        else:
+            label_positions[label] = [index]
+            all_labels.append(label)
+
+    for label in all_labels:
+        random.shuffle(label_positions[label])
+
+    train_instances = []
+
+    found = True
+    position = 0
+    add_train_left = no_instances_take
+    while found:
+        found = False
+        for _, positions in label_positions.items():
+            if position < len(positions):
+                found = True
+                if add_train_left > 0:
+                    train_instances.append(data_list[positions[position]])
+                    add_train_left -= 1
+                else:
+                    break
+        position += 1
+
+    return train_instances
+
+
+def create_new_dataset(from_dataset_named: str, no_instances: int):
+    folder_datasets = "Datasets"
+    # dataset = load_instances(folder_datasets, from_dataset_named)
+    #
+    # new_dataset = split_instances(dataset, no_instances)
+    #
+    dataset = create_val_dataset()
+    print_dataset_distribution(dataset, "")
+
+    save_instances(dataset, folder_datasets, "D5 Hard")
+
+    # D1 10k N 30-60 E 7,5-20 -> randomly generated
+    # D2 10k N 30-60 3-6C balanced with chromatic number in range [3,6] generated adding random edges
+    # D3 10k N 30-60 Clique balanced with c in [3,8] with clique and random edges
+    # D4 10k N30-60 taken from RG2 with the same distribution with range [2,6]
+    # D5 126 Hard instances
 
 
 if __name__ == '__main__':
-    create_val_dataset()
+    create_new_dataset("RG2 100k N 20-60 E 7,5-20", 10_000)

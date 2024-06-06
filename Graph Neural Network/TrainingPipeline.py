@@ -103,7 +103,7 @@ class TrainingPipeline:
 
             model = GNNSimpleLayers(self.device, **config.model,
                                     layer_aggregation=config.layer_aggregation,
-                                    global_layer_aggregation=config.global_layer_aggregation)
+                                    global_layer_aggregation=config.final_layer_aggregation)
 
             no_workers = 2
             pin_memory = (model.device.type == 'cuda')

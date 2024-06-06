@@ -304,7 +304,7 @@ def split_instances(data_list, train_percent: float):
     return train_instances, val_instances
 
 
-def train(model, criterion, optimizer, train_loader, pbar):
+def train(model, criterion, optimizer, train_loader, model_architecture_type: ModelArchitecture, pbar):
     model.train()
 
     total_loss = 0.0
@@ -327,7 +327,7 @@ def train(model, criterion, optimizer, train_loader, pbar):
     return total_loss
 
 
-def test(model, criterion, loader):
+def test(model, criterion, loader, model_architecture_type: ModelArchitecture):
     model.eval()
 
     total_loss = 0
@@ -335,6 +335,7 @@ def test(model, criterion, loader):
         data = data.to(model.device, non_blocking=True)
         target = data.y.unsqueeze(1)
 
+        prediction = None
         with torch.no_grad():
             prediction = model(data.x, data.edge_index, data.batch)
 
@@ -345,22 +346,32 @@ def test(model, criterion, loader):
 
 def test_model(no_epochs: int, train_batch_size: int,
                instances: Union[list[Data], None],
-               train_percent: float,
+               train_percent: float, use_default_val_dataset: bool,
                val_extra_dataset: list[Data], extra_val_loss_percentage: float,
+               model_architecture_type: ModelArchitecture,
                model, criterion, optimizer,
                model_path: str):
-    train_dataset, val_dataset = split_instances(instances, train_percent)
+    if use_default_val_dataset:
+        train_dataset, val_dataset = split_instances(instances, train_percent)
+    else:
+        train_dataset = instances
 
     no_workers = 1
     pin_memory = (model.device.type == 'cuda')
     persistent_workers = (no_workers != 0)
+
+    val_batch_size = 32
+    extra_val_batch_size = 32
+    # if model_architecture_type:
+    #     train_batch_size, val_batch_size, extra_val_batch_size = 1, 1, 1
+
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True,
                               pin_memory=pin_memory, num_workers=no_workers, persistent_workers=persistent_workers,
                               drop_last=True)
-    no_val_instances = len(val_dataset)
-    no_extra_val_instances = len(val_extra_dataset)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    extra_val_loader = DataLoader(val_extra_dataset, batch_size=16, shuffle=False)
+    if use_default_val_dataset:
+        val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=False)
+
+    extra_val_loader = DataLoader(val_extra_dataset, batch_size=extra_val_batch_size, shuffle=False)
 
     all_train_loss = []
     all_val_loss = []
@@ -370,9 +381,9 @@ def test_model(no_epochs: int, train_batch_size: int,
     for epoch in range(1, no_epochs + 1):
         pbar = tqdm(total=len(train_loader), desc=f"Epoch {epoch}", dynamic_ncols=True)
 
-        train_loss = train(model, criterion, optimizer, train_loader, pbar)
-        val_loss = test(model, criterion, val_loader)
-        extra_val_loss = test(model, criterion, extra_val_loader)
+        train_loss = train(model, criterion, optimizer, train_loader, model_architecture_type, pbar)
+        val_loss = test(model, criterion, val_loader, model_architecture_type) if use_default_val_dataset else 0.0
+        extra_val_loss = test(model, criterion, extra_val_loader, model_architecture_type)
 
         total_val_loss = (1 - extra_val_loss_percentage) * val_loss + \
                          extra_val_loss_percentage * extra_val_loss
@@ -402,7 +413,8 @@ def test_model(no_epochs: int, train_batch_size: int,
         'train_loss': all_train_loss,
         'val_loss': all_val_loss,
         'extra_val_loss': all_extra_val_loss,
-        'extra_val_loss_percentage': extra_val_loss_percentage
+        'extra_val_loss_percentage': extra_val_loss_percentage,
+        'use_default_val_dataset': use_default_val_dataset
     }
 
     with open(model_path + "-Info.txt", 'w') as file:
@@ -685,39 +697,53 @@ def create_and_train_model():
     # device = torch.device('cpu')
     device = get_default_device()
 
-    no_epochs = 100
+    no_epochs = 25
     train_batch_size = 32
     train_percent = 0.9
+    use_default_val_dataset = False
 
     # dataset_name = "RE B 100k with 3-6 CN"
     # dataset_name = "RG1 C-100 LCN-6"
-    dataset_name = "RG1 10k N 30-60 E 7,5-20"
+
+    dataset_name = "D1 10k N 30-60 E 7,5-20"
+    # dataset_name = "D2 10k N 30-60 3-6C"
+    # dataset_name="D3 10k N 30-60"
+    # dataset_name="D4 10k N30-60"
+    # dataset_name = "D5 Hard"
+
     # dataset_name = "RG2 100k N 20-60 E 7,5-20"
 
     # Used for validation extra dataset
     chromatic_number_range = (3, 15)
     extra_val_loss_percentage = 1
 
-    model_name = "10k M1"
-    model_architecture = ModelArchitecture.GraphConvLayers
+    model_name = "D1 1"
+    model_architecture = ModelArchitecture.SAGEConv
     model_architecture_str = str(model_architecture).split(".")[1]
     model_path = (
                      "" if models_folder == "" else models_folder + "/") + model_architecture_str + "-" + model_name
 
     hyper_parameters = {
-        'no_units_per_gc_layer': [128, 128, 128],
-        'no_node_features': 128,
+        'no_units_per_gc_layer': [96, 96, 96],
+        'no_node_features': 96,
 
         'no_units_per_dense_layer': [],
 
         'layer_aggregation': "add",
         'global_layer_aggregation': "mean",
-        'gc_layer_dropout': 0.5
+        'gc_layer_dropout': 0.25
     }
+    # hyper_parameters = {
+    #     'no_node_features': 128,
+    #     'layer_aggregation': 'add',
+    #     'final_layer_aggregation': 'mean',
+    #     'layers_dropout': 0.5
+    # }
     # linear_layer_dropout = 0.25
     # conv_layer_dropout = 0.1
 
     learning_rate = 1e-3
+    weight_decay = 5e-4
 
     criterion = torch.nn.L1Loss()
     # criterion = torch.nn.MSELoss()
@@ -730,7 +756,7 @@ def create_and_train_model():
     print(f"no epochs:{no_epochs},batch_size:{train_batch_size},train_percentage:{train_percent}")
 
     model = get_model(model_architecture, device, hyper_parameters)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
@@ -752,8 +778,9 @@ def create_and_train_model():
     del dataset
 
     test_model(no_epochs, train_batch_size,
-               dataset_instances, train_percent,
+               dataset_instances, train_percent, use_default_val_dataset,
                extra_val_dataset, extra_val_loss_percentage,
+               model_architecture,
                model, criterion, optimizer, model_path)
 
     test_model_from(instance_folder, test_instances_names, extension, model_name, model_path)
