@@ -686,8 +686,8 @@ def train_models():
                      "D5 Hard"]
 
     hyper_parameters = {
-        'no_units_per_gc_layer': [128, 128, 128],
-        'no_node_features': 128,
+        'no_units_per_gc_layer': [96, 96, 96],
+        'no_node_features': 96,
 
         'no_units_per_dense_layer': [],
 
