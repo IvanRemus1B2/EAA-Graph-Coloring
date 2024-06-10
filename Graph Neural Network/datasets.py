@@ -7,6 +7,8 @@ from typing import Union
 
 import random
 
+import os
+
 import torch
 from torch.nn import Linear
 import torch.nn.functional as F
@@ -101,31 +103,46 @@ def create_graph(no_vertices: int, edges: list[tuple[int, int]]) -> nx.Graph:
     return graph
 
 
-def read_col_file(folder: str, instance_name: str, extension: str) -> GraphColoringInstance:
+def read_col_file(folder: str, instance_name: str, extension: str, info_file_path: str = None) -> GraphColoringInstance:
     # Search for the chromatic number and source in the info file
     instance_chromatic_number = None
     found = False
+    source = ""
+    description = ""
 
-    info_file_path = folder + "\\" + "Instances Info.txt"
+    if info_file_path is None:
+        info_file_path = folder + "\\" + "Instances Info.txt"
+        with open(info_file_path, 'r') as info_file:
+            for line in info_file.readlines():
+                name, _, chromatic_number, source = line.split(",")
+                name = name.rsplit(".", 1)[0]
+                chromatic_number = int(chromatic_number) if chromatic_number != " ?" else None
+                if name == instance_name:
+                    instance_chromatic_number = chromatic_number
+                    found = True
+                    break
+
+        if not found:
+            raise ValueError(f"The file {instance_name} wasn't found in the Instance Info.txt file")
+    else:
+        # Given,we assume the format is 'name chromatic number character'
+        with open(info_file_path, 'r') as info_file:
+            for line in info_file.readlines():
+                name, chromatic_number, _ = line.split(" ")
+                chromatic_number = int(chromatic_number) if chromatic_number != " ?" else None
+                if name == instance_name:
+                    instance_chromatic_number = chromatic_number
+                    found = True
+                    break
+
+        if not found:
+            raise ValueError(f"The file {instance_name} wasn't found at {info_file_path}")
+
     file_path = folder + "\\" + instance_name + extension
-    with open(info_file_path, 'r') as info_file:
-        for line in info_file.readlines():
-            name, _, chromatic_number, source = line.split(",")
-            name = name.rsplit(".", 1)[0]
-            chromatic_number = int(chromatic_number) if chromatic_number != " ?" else None
-            if name == instance_name:
-                instance_chromatic_number = chromatic_number
-                found = True
-                break
-
-    if not found:
-        raise ValueError(f"The file {instance_name} wasn't found in the Instance Info.txt file")
-
     with open(file_path, 'r') as file:
         lines = file.readlines()
         no_vertices = None
         no_edges = None
-        description = ""
         edges = []
         for line in lines:
             if line.startswith('p'):
@@ -145,10 +162,11 @@ def read_col_file(folder: str, instance_name: str, extension: str) -> GraphColor
                                  description, source)
 
 
-def read_instances(instance_names: list[str], instance_folder: str, extension: str) -> list[GraphColoringInstance]:
+def read_instances(instance_names: list[str], instance_folder: str, extension: str, info_file_path: str = None) -> list[
+    GraphColoringInstance]:
     instances = []
     for instance_name in instance_names:
-        coloring_instance = read_col_file(instance_folder, instance_name, extension)
+        coloring_instance = read_col_file(instance_folder, instance_name, extension, info_file_path)
         instances.append(coloring_instance)
         # instances.append(coloring_instance.convert_to_data())
     return instances
@@ -399,7 +417,7 @@ def create_dataset_with_least_chromatic_number(no_instances: int,
     return instances
 
 
-if __name__ == '__main__':
+def main1():
     start_time = time.time()
 
     dataset_folder = "Datasets"
@@ -491,3 +509,99 @@ if __name__ == '__main__':
     #     print(f"Execution time:{execution_time}")
     #     print(f"Found chromatic number:{chromatic_number}")
     #     print(f"Real chromatic number:{instance.chromatic_number}")
+
+
+def get_file_names(chromatic_number_range: tuple[int, int],
+                   excluded_instances: list[str]) -> list[str]:
+    instance_names = []
+    instance_folder = "Additional Instances/reduced_gcp"
+    with open("Additional Instances/best_scores_gcp.txt") as file:
+        for line in file.readlines():
+            values = line.split(" ")
+            values[-1] = values[-1][:-1]
+
+            instance_name = values[0]
+            chromatic_number = int(values[1])
+            is_optimal = (values[2] == '*')
+            if is_optimal and (not (instance_name in excluded_instances)) and chromatic_number_range[
+                0] <= chromatic_number <= chromatic_number_range[
+                1] and os.path.isfile(
+                instance_folder + "/" + instance_name + ".col"):
+                instance_names.append(instance_name)
+
+    return instance_names
+
+
+def create_val_dataset():
+    excluded_instances = []
+    excluded_instances += ["anna", "david", "huck", "jean", "homer"]
+    excluded_instances += ["queen5_5", "queen6_6", "queen7_7", "queen8_12", "queen8_8", "queen9_9", "queen13_13"]
+    excluded_instances += ["myciel5", "myciel6", "myciel7"]
+    excluded_instances += ["games120"]
+
+    val_instance_names = get_file_names((3, 15), excluded_instances)
+
+    instance_folder = "Additional Instances/reduced_gcp"
+    info_file_path = "Additional Instances/best_scores_gcp.txt"
+    extension = ".col"
+
+    val_dataset = read_instances(val_instance_names, instance_folder, extension, info_file_path)
+
+    return val_dataset
+
+
+def split_instances(data_list, no_instances_take: int):
+    label_positions = dict()
+    all_labels = []
+    no_instances = len(data_list)
+    for index in range(no_instances):
+        label = int(data_list[index].chromatic_number)
+        if label in label_positions:
+            label_positions[label].append(index)
+        else:
+            label_positions[label] = [index]
+            all_labels.append(label)
+
+    for label in all_labels:
+        random.shuffle(label_positions[label])
+
+    train_instances = []
+
+    found = True
+    position = 0
+    add_train_left = no_instances_take
+    while found:
+        found = False
+        for _, positions in label_positions.items():
+            if position < len(positions):
+                found = True
+                if add_train_left > 0:
+                    train_instances.append(data_list[positions[position]])
+                    add_train_left -= 1
+                else:
+                    break
+        position += 1
+
+    return train_instances
+
+
+def create_new_dataset(from_dataset_named: str, no_instances: int):
+    folder_datasets = "Datasets"
+    # dataset = load_instances(folder_datasets, from_dataset_named)
+    #
+    # new_dataset = split_instances(dataset, no_instances)
+    #
+    dataset = create_val_dataset()
+    print_dataset_distribution(dataset, "")
+
+    save_instances(dataset, folder_datasets, "D5 Hard")
+
+    # D1 10k N 30-60 E 7,5-20 -> randomly generated
+    # D2 10k N 30-60 3-6C balanced with chromatic number in range [3,6] generated adding random edges
+    # D3 10k N 30-60 Clique balanced with c in [3,8] with clique and random edges
+    # D4 10k N30-60 taken from RG2 with the same distribution with range [2,6]
+    # D5 126 Hard instances
+
+
+if __name__ == '__main__':
+    create_new_dataset("RG2 100k N 20-60 E 7,5-20", 10_000)
