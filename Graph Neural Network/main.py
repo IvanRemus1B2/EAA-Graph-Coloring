@@ -406,7 +406,7 @@ def test_model(no_epochs: int, train_batch_size: int,
         pbar.close()
 
         all_train_loss.append(train_loss)
-        all_val_loss.append(val_loss)
+        all_val_loss.append(total_val_loss)
         all_extra_val_loss.append(extra_val_loss)
 
     model_info = {
